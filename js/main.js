@@ -66,4 +66,42 @@ $('helpBtn').onclick=()=>openGuide(0);$('quickGuide').onclick=()=>{$('sidebar').
 window.addEventListener('scroll',()=>document.querySelector('.topbar').classList.toggle('scrolled',window.scrollY>4),{passive:true});
 pendingJoin=parseJoinHash();
 if(pendingJoin){const ban=$('inviteBanner');ban.hidden=false;ban.textContent='Bạn được mời vào nhóm “'+pendingJoin.name+'”. Đăng nhập hoặc tạo tài khoản để tham gia.'}
-(function init(){const email=localStorage.getItem(KEY_SESSION),u=email&&getUsers()[email];if(u)enterApp(u);else{setAuthMode(pendingJoin?'register':'login');showLogin()}})();
+function removeSplash(now){const sp=$('splash');if(!sp)return;if(now){sp.remove();return}sp.classList.add('hide');setTimeout(()=>sp.remove(),800)}
+function runSplash(done){
+ const sp=$('splash');if(!sp){done();return}
+ const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+ let finished=false;const timers=[];
+ const st=$('splashStatus');
+ if(!reduce)[[900,'Đang tải bảng công việc…'],[1800,'Sẵn sàng!']].forEach(([t,m])=>timers.push(setTimeout(()=>{st.textContent=m},t)));
+ const onKey=e=>{if(e.key==='Escape'||e.key==='Enter')finish()};
+ function finish(){if(finished)return;finished=true;timers.forEach(clearTimeout);document.removeEventListener('keydown',onKey);done();removeSplash()}
+ timers.push(setTimeout(finish,reduce?500:2700));
+ $('splashSkip').onclick=finish;document.addEventListener('keydown',onKey);
+}
+(function init(){const email=localStorage.getItem(KEY_SESSION),u=email&&getUsers()[email];if(u){enterApp(u);runSplash(function(){})}else{setAuthMode(pendingJoin?'register':'login');runSplash(showLogin)}})();
+
+
+/* ---------- Chuyển cảnh mượt khi chọn mục ---------- */
+(function(){
+ const replay=(el,cls)=>{if(!el)return;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);clearTimeout(el._pt);el._pt=setTimeout(()=>el.classList.remove(cls),1000)};
+ const keys=()=>{if(!db)return[null,null];let b=null;try{b=board()}catch(e){}return[viewMode+'|'+db.current,((b&&b.view)||'')+'|'+(zoomDay||'')]};
+ let [k1,k2]=keys();
+ const _render=render,_rs=renderSidebar;
+ render=function(){
+  const [n1,n2]=keys();
+  const pageChanged=k1!==null&&n1!==null&&n1!==k1,partChanged=!pageChanged&&k2!==null&&n2!==null&&n2!==k2;
+  k1=n1;k2=n2;
+  const r=_render.apply(this,arguments);
+  if(pageChanged)replay(viewMode==='grades'?$('gradesView'):$('boardView'),'page-in');
+  else if(partChanged)replay(document.querySelector('#boardView .board-panel'),'part-in');
+  return r;
+ };
+ const selKeyNow=()=>document.querySelector('.sidebar .side-board.selected')?(viewMode+'|'+(db&&db.current)):null;
+ let selKey=selKeyNow();
+ renderSidebar=function(){
+  const r=_rs.apply(this,arguments);
+  const key=selKeyNow();
+  if(key&&selKey!==null&&key!==selKey)replay(document.querySelector('.sidebar .side-board.selected'),'sel-anim');
+  selKey=key;return r;
+ };
+})();
