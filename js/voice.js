@@ -7,7 +7,7 @@ function parseVoiceCommand(text,members){
  let low=orig.toLocaleLowerCase("vi");
  if(low.length!==orig.length){low=orig.toLowerCase();if(low.length!==orig.length)orig=low}
  function cut(re){const m=re.exec(low);if(!m)return null;low=low.slice(0,m.index)+" "+low.slice(m.index+m[0].length);orig=orig.slice(0,m.index)+" "+orig.slice(m.index+m[0].length);return m}
- const now=new Date();const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+ const now=vnWall();const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
  let m,priority=null,remind=null,assignee=null,period=null,date=null,time=null;
  // 1. Nhắc trước
  if(m=cut(B("nhắc(?:\\s+tôi|\\s+mình)?(?:\\s+trước)?\\s*(\\d+)\\s*(phút|giờ|tiếng|ngày)(?:\\s+trước)?"))){const n=+m[1];remind=/phút/.test(m[2])?n:/ngày/.test(m[2])?n*1440:n*60}
@@ -99,7 +99,7 @@ function parseEventCommand(text,todayStr){
  function cut(re){const m=re.exec(low);if(!m)return null;low=low.slice(0,m.index)+" "+low.slice(m.index+m[0].length);orig=orig.slice(0,m.index)+" "+orig.slice(m.index+m[0].length);return m}
  const p2=n=>String(n).padStart(2,"0"),fmt=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
  const pd=s=>{const p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2])};
- const today=todayStr?pd(todayStr):(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())})();
+ const today=todayStr?pd(todayStr):(()=>{const n=vnWall();return new Date(n.getFullYear(),n.getMonth(),n.getDate())})();
  const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
  const eom=(y,mo)=>new Date(y,mo,0);
  const dm=d=>p2(d.getDate())+"/"+p2(d.getMonth()+1);

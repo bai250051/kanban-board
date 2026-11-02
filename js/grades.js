@@ -100,20 +100,37 @@ function updateCourseUI(el){
  const warn=el.querySelector('.course-warn');const off=Math.abs(r.W-100)>0.01&&r.W>0;warn.hidden=!off;if(off)warn.textContent='⚠ Tổng trọng số hiện là '+fnum(r.W)+'% (nên bằng 100%). Kết quả được chuẩn hóa theo tổng '+fnum(r.W)+'%.';
  el.querySelector('.gt-wsum').textContent='Tổng trọng số = '+fnum(r.W)+'%';
  const fc=el.querySelector('.gt-final-cell');if(r.complete){const g=toGrade(r.final,r.scale);fc.innerHTML=fnum(r.final)+'<small class="fc-grade">'+esc(g.letter)+' · '+gp(g.gpa)+'/4</small>'}else fc.textContent='-';
- const hint=el.querySelector('.target-hint');if(hint)hint.textContent=targetInfo(c).hint;fc.title=r.complete?'Điểm tổng kết':'Chưa đủ điểm các đầu điểm';
+ const hint=el.querySelector('.target-hint');if(hint)hint.textContent=targetInfo(c).hint;
+ const aw=el.querySelector('.assume-wrap');if(aw)aw.hidden=!r.hasOther;
+ renderGpa();fc.title=r.complete?'Điểm tổng kết':'Chưa đủ điểm các đầu điểm';
  el.querySelectorAll('.gt-score').forEach((inp,i)=>{const col=c.columns[i];const v=gradeVal(col,r.scale);inp.classList.toggle('bad',!!v.bad);inp.classList.toggle('skip',!!(r.target&&col.name===r.target&&!v.empty&&!v.bad))});
+}
+/* Điểm trung bình học kỳ theo tín chỉ: chỉ tính các môn đã đủ điểm và đã nhập số tín chỉ */
+function renderGpa(){
+ const box=$('gpaBox');if(!box||!db||!db.grades)return;
+ const rows=[];let noCr=0,pending=0;
+ db.grades.courses.forEach(c=>{
+  const r=calcCourse(c),cr=parseFloat(String(c.credits==null?'':c.credits).replace(',','.'));
+  if(r.err||!r.complete){pending++;return}
+  if(!(cr>0)){noCr++;return}
+  const g=toGrade(r.final,r.scale);rows.push({cr,s10:g.r,gpa:+g.gpa});
+ });
+ if(!rows.length){box.innerHTML='<div class="note gpa-empty">🎓 <b>Điểm trung bình học kỳ:</b> nhập số tín chỉ ở từng môn và nhập đủ điểm các đầu điểm để xem điểm trung bình theo tín chỉ (thang 10 và thang 4).</div>';return}
+ const tc=rows.reduce((a,x)=>a+x.cr,0),a10=rows.reduce((a,x)=>a+x.s10*x.cr,0)/tc,a4=rows.reduce((a,x)=>a+x.gpa*x.cr,0)/tc,f2=x=>(Math.round(x*100)/100).toFixed(2);
+ box.innerHTML='<div class="big-kpi cur"><div class="kpi-title"><span class="kpi-ico">🎓</span>Điểm trung bình học kỳ</div><div class="dual"><div class="d10"><b>'+f2(a10)+'</b><em>/10</em></div><div class="d4"><b>'+f2(a4)+'</b><em>/4</em></div></div><span class="kpi-sub">Tính từ '+rows.length+' môn đã đủ điểm ('+fnum(tc)+' tín chỉ)'+(noCr?' · '+noCr+' môn đã đủ điểm nhưng chưa nhập tín chỉ nên chưa tính':'')+(pending?' · '+pending+' môn chưa đủ điểm':'')+'</span></div>';
 }
 function renderGrades(){
  ensureGrades();const box=$('courseList');box.innerHTML='';
  db.grades.courses.forEach(c=>{
   const el=document.createElement('section');el.className='course';el.dataset.id=c.id;
   const r=calcCourse(c),tgtName=r.target;
-  el.innerHTML='<div class="course-head"><input class="course-name" maxlength="60" value="'+esc(c.name)+'" aria-label="Tên môn"><label class="course-scale-wrap">Thang điểm <input class="course-scale" type="number" min="1" max="1000" step="any" value="'+esc(c.scale)+'"></label><button class="btn btn-light" data-act="addcol" type="button">＋ Đầu điểm</button><button class="btn btn-danger" data-act="delcourse" type="button" title="Xóa môn này">🗑 Xóa môn</button></div>'+
-  '<div class="grade-scroll"><table class="grade-table"><thead><tr>'+c.columns.map(col=>'<th><div class="gt-name"><input class="gt-cname" data-col="'+col.id+'" maxlength="40" value="'+esc(col.name)+'" aria-label="Tên đầu điểm"><button type="button" class="gt-x" data-act="delcol" data-col="'+col.id+'" title="Xóa đầu điểm" aria-label="Xóa đầu điểm">×</button></div><div class="gt-w"><input class="gt-cw" data-col="'+col.id+'" type="number" min="0" max="100" step="any" value="'+esc(col.weight)+'" aria-label="Trọng số (%)">%<button type="button" class="gt-target'+(tgtName===col.name?' on':'')+'" data-act="target" data-col="'+col.id+'" title="Tính điểm cần ở đầu điểm này" aria-label="Chọn đầu điểm cần tính">🎯</button></div></th>').join('')+'<th class="gt-final">Điểm tổng kết<small class="gt-wsum"></small></th></tr></thead><tbody><tr>'+c.columns.map(col=>'<td><input class="gt-score" data-col="'+col.id+'" inputmode="decimal" placeholder="-" value="'+esc(col.score)+'" aria-label="Điểm"></td>').join('')+'<td class="gt-final-cell">-</td></tr></tbody></table></div>'+
-  '<div class="course-warn" hidden></div><div class="course-calc"><div class="calc-in"><label>Điểm tổng kết mong muốn<span class="tmode-row"><input class="course-target" inputmode="decimal" placeholder="'+(c.tmode==='4'?'Ví dụ: 3.0':'Ví dụ: 6')+'" value="'+esc(c.target)+'"><span class="seg tmode" role="group" aria-label="Nhập theo thang nào"><button type="button" data-act="tmode" data-m="10" class="'+(c.tmode==='4'?'':'on')+'" title="Nhập theo thang 10">10</button><button type="button" data-act="tmode" data-m="4" class="'+(c.tmode==='4'?'on':'')+'" title="Nhập theo thang 4">4</button></span></span><small class="target-hint"></small></label><label>Hoặc chọn mục tiêu theo điểm chữ<select class="target-grade"><option value="">Chọn hạng…</option>'+gscale().map(g=>'<option value="'+g.min+'">'+esc(g.letter)+' · từ '+fnum(g.min)+' ('+gp(g.gpa)+'/4)</option>').join('')+'</select></label><label>Giả định các cột trống khác<input class="course-assume" inputmode="decimal" placeholder="Để trống: lấy trung bình các cột đã có" value="'+esc(c.assume)+'"></label><small>Nhiều điểm trong một ô: cách nhau bằng dấu cách hoặc dấu ; (ví dụ <b>7 8,5 6</b>), ô sẽ lấy trung bình. Dấu phẩy dùng làm số thập phân (7,5). Nhấn 🎯 để chọn đầu điểm cần tính, mặc định là đầu điểm trống ngoài cùng bên phải.</small></div><div class="calc-out"></div></div>'+
+  el.innerHTML='<div class="course-head"><input class="course-name" maxlength="60" value="'+esc(c.name)+'" aria-label="Tên môn"><label class="course-scale-wrap">Thang điểm <input class="course-scale" type="number" min="1" max="1000" step="any" value="'+esc(c.scale)+'"></label><label class="course-scale-wrap">Số tín chỉ <input class="course-credits" type="number" min="0" max="50" step="any" placeholder="-" value="'+esc(c.credits==null?'':c.credits)+'"></label><button class="btn btn-light" data-act="addcol" type="button">＋ Đầu điểm</button><button class="btn btn-danger" data-act="delcourse" type="button" title="Xóa môn này">🗑 Xóa môn</button></div>'+
+  '<div class="grade-scroll"><table class="grade-table"><thead><tr>'+c.columns.map((col,ci)=>'<th><div class="gt-name"><input class="gt-cname" data-col="'+col.id+'" maxlength="40" value="'+esc(col.name)+'" aria-label="Tên đầu điểm"><button type="button" class="gt-x" data-act="delcol" data-col="'+col.id+'" title="Xóa đầu điểm" aria-label="Xóa đầu điểm">×</button></div><div class="gt-w"><input class="gt-cw" data-col="'+col.id+'" type="number" min="0" max="100" step="any" value="'+esc(col.weight)+'" aria-label="Trọng số (%)">%<button type="button" class="gt-target'+(tgtName===col.name?' on':'')+'" data-act="target" data-col="'+col.id+'" title="Tính điểm cần ở đầu điểm này" aria-label="Chọn đầu điểm cần tính">🎯</button></div><div class="gt-move"><button type="button" data-act="movecol" data-dir="-1" data-col="'+col.id+'" title="Dời sang trái" aria-label="Dời đầu điểm sang trái"'+(ci===0?' disabled':'')+'>◀</button><button type="button" data-act="movecol" data-dir="1" data-col="'+col.id+'" title="Dời sang phải" aria-label="Dời đầu điểm sang phải"'+(ci===c.columns.length-1?' disabled':'')+'>▶</button></div></th>').join('')+'<th class="gt-final">Điểm tổng kết<small class="gt-wsum"></small></th></tr></thead><tbody><tr>'+c.columns.map(col=>'<td><input class="gt-score" data-col="'+col.id+'" inputmode="decimal" placeholder="-" value="'+esc(col.score)+'" aria-label="Điểm"></td>').join('')+'<td class="gt-final-cell">-</td></tr></tbody></table></div>'+
+  '<div class="course-warn" hidden></div><div class="course-calc"><div class="calc-in"><label>Điểm tổng kết mong muốn<span class="tmode-row"><input class="course-target" inputmode="decimal" placeholder="'+(c.tmode==='4'?'Ví dụ: 3.0':'Ví dụ: 6')+'" value="'+esc(c.target)+'"><span class="seg tmode" role="group" aria-label="Nhập theo thang nào"><button type="button" data-act="tmode" data-m="10" class="'+(c.tmode==='4'?'':'on')+'" title="Nhập theo thang 10">10</button><button type="button" data-act="tmode" data-m="4" class="'+(c.tmode==='4'?'on':'')+'" title="Nhập theo thang 4">4</button></span></span><small class="target-hint"></small></label><label>Hoặc chọn mục tiêu theo điểm chữ<select class="target-grade"><option value="">Chọn hạng…</option>'+gscale().map(g=>'<option value="'+g.min+'">'+esc(g.letter)+' · từ '+fnum(g.min)+' ('+gp(g.gpa)+'/4)</option>').join('')+'</select></label><label class="assume-wrap">Giả định các cột trống khác<input class="course-assume" inputmode="decimal" placeholder="Để trống: lấy trung bình các cột đã có" value="'+esc(c.assume)+'"></label><small>Nhiều điểm trong một ô: cách nhau bằng dấu cách hoặc ; (ví dụ <b>7 8,5 6</b>) để lấy trung bình. Nhấn 🎯 chọn đầu điểm cần tính; mặc định là cột trống ngoài cùng bên phải.</small></div><div class="calc-out"></div></div>'+
   '<div class="calc-actions" style="padding:0 18px 18px"><button class="btn btn-light" type="button" data-act="studytask">＋ Tạo thẻ ôn thi từ kết quả</button></div>';
   box.appendChild(el);updateCourseUI(el);
  });
+ renderGpa();
 }
 $('courseList').addEventListener('input',e=>{
  const el=e.target.closest('.course');if(!el)return;const c=db.grades.courses.find(x=>x.id===el.dataset.id);if(!c)return;
@@ -122,6 +139,7 @@ $('courseList').addEventListener('input',e=>{
  else if(t.classList.contains('course-scale'))c.scale=t.value;
  else if(t.classList.contains('course-target'))c.target=t.value;
  else if(t.classList.contains('course-assume'))c.assume=t.value;
+ else if(t.classList.contains('course-credits'))c.credits=t.value;
  else if(t.classList.contains('gt-cname')&&col)col.name=t.value;
  else if(t.classList.contains('gt-cw')&&col)col.weight=t.value;
  else if(t.classList.contains('gt-score')&&col)col.score=t.value;
@@ -140,6 +158,12 @@ $('courseList').addEventListener('click',e=>{
  const act=btn.dataset.act;
  if(act==='addcol'){const nc={id:uid(),name:'Đầu điểm mới',weight:0,score:''};c.columns.splice(Math.max(c.columns.length-1,0),0,nc);save();renderGrades();const inp=$('courseList').querySelector('.gt-cname[data-col="'+nc.id+'"]');if(inp){inp.focus();inp.select()}}
  else if(act==='delcol'){if(c.columns.length<=1){showToast('Cần giữ lại ít nhất một đầu điểm');return}pushUndo();c.columns=c.columns.filter(x=>x.id!==btn.dataset.col);if(c.targetCol===btn.dataset.col)c.targetCol=null;save();renderGrades();showToast('Đã xóa đầu điểm',true)}
+ else if(act==='movecol'){
+  const i=c.columns.findIndex(x=>x.id===btn.dataset.col),j=i+(+btn.dataset.dir);if(i<0||j<0||j>=c.columns.length)return;
+  pushUndo();[c.columns[i],c.columns[j]]=[c.columns[j],c.columns[i]];save();renderGrades();
+  const nb=$('courseList').querySelector('.course[data-id="'+c.id+'"] .gt-move button[data-col="'+btn.dataset.col+'"][data-dir="'+btn.dataset.dir+'"]');if(nb&&!nb.disabled)nb.focus();
+  showToast('Đã đổi thứ tự đầu điểm',true);
+ }
  else if(act==='target'){c.targetCol=c.targetCol===btn.dataset.col?null:btn.dataset.col;save();renderGrades()}
  else if(act==='tmode'){
   const m=btn.dataset.m==='4'?'4':'10';if((c.tmode==='4'?'4':'10')===m)return;

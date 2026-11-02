@@ -11,7 +11,7 @@ function deadlineItems(){
   if(state)out.push({key:b.id+':'+t.id+':'+t.due+':'+state,state,t,b,ts});
  }));
  const today0=parseDay(vnToday());
- db.boards.forEach(b=>{if(b.type!=='personal')return;(b.events||[]).forEach(ev0=>{[0,1].forEach(k=>{const day=ymd(addDay(today0,k));if(!eventOccursOn(ev0,day))return;const ev=occ(ev0,day),ts=new Date(day+'T'+ev.start).getTime();if(ts<now)return;const rm=(ev.remind==null?15:ev.remind)*60000;let state=null;if(rm&&ts-now<=rm)state='soon';else if(ts-now<=24*3600000)state='up';if(state)out.push({key:b.id+':e'+ev.id+':'+day+':'+state,state,ev,day,b,ts,t:{id:ev.id,title:ev.title,due:day+'T'+ev.start,remind:ev.remind}})})})});
+ db.boards.forEach(b=>{if(b.type!=='personal')return;(b.events||[]).forEach(ev0=>{[0,1].forEach(k=>{const day=ymd(addDay(today0,k));if(!eventOccursOn(ev0,day))return;const ev=occ(ev0,day),ts=dueTs(day+'T'+ev.start);if(ts<now)return;const rm=(ev.remind==null?15:ev.remind)*60000;let state=null;if(rm&&ts-now<=rm)state='soon';else if(ts-now<=24*3600000)state='up';if(state)out.push({key:b.id+':e'+ev.id+':'+day+':'+state,state,ev,day,b,ts,t:{id:ev.id,title:ev.title,due:day+'T'+ev.start,remind:ev.remind}})})})});
  return out.sort((a,b)=>a.ts-b.ts);
 }
 function mentionItems(){

@@ -75,6 +75,7 @@
   <div class="content" id="gradesView" hidden>
     <div class="crumb"><span>Học tập</span>&nbsp; / &nbsp;<span>Tính điểm</span></div>
     <div class="heading-row"><div class="board-title-wrap"><div class="eyebrow">HỌC TẬP</div><h1>Tính điểm môn học</h1><p class="subtitle">Nhập trọng số (%) và điểm đã có của từng đầu điểm, đặt điểm tổng kết mong muốn. Web cho biết điểm tối đa có thể đạt và điểm cần ở bài còn lại.</p></div><div class="actions"><button class="btn btn-light" id="scaleBtn" title="Bảng quy đổi điểm chữ và thang 4">⚙ Quy đổi thang 4</button><button class="btn btn-primary" id="addCourseBtn">＋ Thêm môn</button></div></div>
+    <div id="gpaBox"></div>
     <div id="courseList"></div>
     <div class="note grades-note">Kết quả chỉ để tham khảo, không thay thế điểm chính thức. Cách làm tròn và quy chế thật của mỗi trường có thể khác. Điểm lưu trong trình duyệt này.</div>
   </div>
@@ -125,8 +126,9 @@
    <button type="button" class="theme-card" data-theme-choice="dark" aria-pressed="false"><div class="theme-preview dark"><i></i><i></i><i></i></div><span class="theme-name">🌙 Tối</span></button>
   </div><div class="voice-hint">Lựa chọn được ghi nhớ trên trình duyệt này, kể cả ở màn hình đăng nhập.</div></div>
  
-  <div class="field"><label>Định dạng giờ</label><div class="seg" id="timeFmtSeg" role="group" aria-label="Định dạng giờ"><button type="button" data-tf="12" class="on">12 giờ (AM/PM)</button><button type="button" data-tf="24">24 giờ</button></div><div class="voice-hint">Áp dụng cho bộ chọn giờ và mọi giờ hiển thị trên web. Dữ liệu bên trong luôn lưu theo 24 giờ.</div></div>
+  <div class="field"><label>Định dạng giờ</label><div class="seg" id="timeFmtSeg" role="group" aria-label="Định dạng giờ"><button type="button" data-tf="12" class="on">12 giờ (AM/PM)</button><button type="button" data-tf="24">24 giờ</button></div><div class="voice-hint">Áp dụng cho bộ chọn giờ và mọi giờ hiển thị trên web. Dữ liệu bên trong luôn lưu theo 24 giờ. Mọi hạn và giờ tính theo giờ Việt Nam (UTC+7), dù máy bạn đặt múi giờ nào.</div></div>
   <div class="field"><label>Dung lượng lưu trữ</label><div class="note" id="storageInfo">Đang đọc…</div></div>
+  <div class="field"><label>Sao lưu dữ liệu</label><div class="note">Dữ liệu chỉ nằm trong trình duyệt này. Hãy xuất file .json để sao lưu, hoặc chuyển sang máy khác rồi nhập lại. File sao lưu gồm các bảng, thẻ, điểm và file đính kèm; không gồm mật khẩu.</div><div class="quick-picks"><button type="button" id="exportJson">⬇ Xuất dữ liệu (.json)</button><button type="button" id="importJsonBtn">⬆ Nhập dữ liệu</button></div><input type="file" id="importJson" accept=".json,application/json" hidden></div>
   <div class="field"><label>Lịch &amp; nhắc việc</label><div class="note">Trang web chỉ nhắc được khi đang mở. Để được nhắc cả khi đã đóng trang, hãy xuất lịch rồi nhập vào Google Calendar, Apple Calendar hoặc Outlook. File gồm hạn của các thẻ chưa xong và lịch cố định (lặp theo tuần, có cả nhắc trước).</div><div class="quick-picks"><button type="button" id="exportIcs">📅 Xuất lịch (.ics)</button></div></div>
  </div><div class="modal-foot"><button class="btn btn-primary" type="button" data-close>Xong</button></div></div></div>
 
@@ -154,6 +156,7 @@
 <script src="js/reminders.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/backup.js"></script>
 <script src="js/rollover.js"></script>
 <script src="js/grades.js"></script>
 <script src="js/main.js"></script>

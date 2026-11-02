@@ -7,6 +7,9 @@ const vnTimeFmt={format:d=>timeFmt==='24'?vnTime24.format(d):vnTime12.format(d).
 const vnDateFmt=new Intl.DateTimeFormat('vi-VN',{timeZone:VN_TZ,weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
 const vnDayFmt=new Intl.DateTimeFormat('en-CA',{timeZone:VN_TZ});
 const vnToday=()=>vnDayFmt.format(new Date());
+const vnPartsFmt=new Intl.DateTimeFormat('en-GB',{timeZone:VN_TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+/* Date có các trường (năm, tháng, ngày, giờ...) đúng giờ Việt Nam, dùng để tính “hôm nay”, “ngày mai” */
+function vnWall(d){const p={};vnPartsFmt.formatToParts(d||new Date()).forEach(x=>{p[x.type]=x.value});return new Date(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second)}
 let lastVnDay=vnToday();
 function tickClock(){
  const now=new Date();$('clockTime').textContent=vnTimeFmt.format(now);$('clockDate').textContent=vnDateFmt.format(now);

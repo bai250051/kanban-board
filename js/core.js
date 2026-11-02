@@ -10,8 +10,9 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const dtLocal=d=>ymd(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
-function dtOffset(days,h=23,m=59){const d=new Date();d.setDate(d.getDate()+days);d.setHours(h,m,0,0);return dtLocal(d)}
-function dueTs(s){if(!s)return NaN;return new Date(s.length===10?s+'T23:59':s).getTime()}
+/* Mọi hạn và giờ trên web tính theo giờ Việt Nam (UTC+7), không phụ thuộc múi giờ của máy */
+function dtOffset(days,h=23,m=59){return ymd(addDay(parseDay(vnToday()),days))+'T'+pad(h)+':'+pad(m)}
+function dueTs(s){if(!s)return NaN;const t=s.length===10?s+'T23:59':s;return Date.parse(t.slice(0,16)+':00+07:00')}
 /* ---------- Giờ: định dạng 12/24 giờ và bộ chọn giờ ---------- */
 const TF_KEY='kanban_timefmt';
 let timeFmt=(()=>{try{return localStorage.getItem(TF_KEY)==='24'?'24':'12'}catch(e){return'12'}})();
@@ -20,7 +21,7 @@ function fmtT(hm){
  const h=+m[1];if(timeFmt==='24')return pad(h)+':'+m[2];
  return (h%12||12)+':'+m[2]+' '+(h>=12?'PM':'AM');
 }
-function fmtDue(s){const d=new Date(s.length===10?s+'T23:59':s);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+fmtT(pad(d.getHours())+':'+pad(d.getMinutes()))}
+function fmtDue(s){const t=s.length===10?s+'T23:59':s;return t.slice(8,10)+'/'+t.slice(5,7)+' '+fmtT(t.slice(11,16))}
 const tpList=[];
 function tpNorm(v){const m=/^(\d{1,2}):(\d{2})/.exec(String(v==null?'':v));if(!m)return'';const h=+m[1],mi=+m[2];return h>23||mi>59?'':pad(h)+':'+pad(mi)}
 /* Gắn bộ chọn giờ (giờ, phút, AM/PM) vào ô ẩn inp. inp.value luôn là 'HH:MM' (24 giờ) hoặc '' */

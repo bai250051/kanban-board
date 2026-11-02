@@ -2,25 +2,26 @@
 /* ---------- Xuất lịch (.ics) ---------- */
 const icsEsc=x=>String(x||'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
 const icsDT=x=>x.replace(/[-:]/g,'').slice(0,13)+'00';
+const ICS_TZ='Asia/Ho_Chi_Minh',icsUtc=x=>new Date(dueTs(x)+59000).toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
 const icsLine=l=>{const o=[];while(l.length>73){o.push(l.slice(0,73));l=' '+l.slice(73)}o.push(l);return o.join('\r\n')};
 const ICS_DAY=['SU','MO','TU','WE','TH','FR','SA'];
 function buildICS(){
- const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kanban Board//VI','CALSCALE:GREGORIAN','X-WR-CALNAME:Kanban Board'],stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';let n=0;
+ const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kanban Board//VI','CALSCALE:GREGORIAN','X-WR-CALNAME:Kanban Board','BEGIN:VTIMEZONE','TZID:'+ICS_TZ,'BEGIN:STANDARD','DTSTART:19700101T000000','TZOFFSETFROM:+0700','TZOFFSETTO:+0700','TZNAME:ICT','END:STANDARD','END:VTIMEZONE'],stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';let n=0;
  const alarm=(m,txt)=>m>0?['BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(txt),'TRIGGER:-PT'+m+'M','END:VALARM']:[];
  db.boards.forEach(b=>{
   b.tasks.forEach(t=>{
    if(!t.due||isDone(b,t)||(b.type==='team'&&t.assignee&&t.assignee!==user.email))return;
-   const st=t.due.length>10?t.due:t.due+'T23:59',e=new Date(new Date(st).getTime()+30*60000);
-   L.push('BEGIN:VEVENT','UID:task-'+t.id+'@kanban','DTSTAMP:'+stamp,'DTSTART:'+icsDT(st),'DTEND:'+icsDT(dtLocal(e)),'SUMMARY:'+icsEsc('⏰ Hạn: '+t.title),'DESCRIPTION:'+icsEsc(b.name+(t.desc?' — '+t.desc:'')),...alarm(t.remind||0,'Sắp đến hạn: '+t.title),'END:VEVENT');n++;
+   const st=t.due.length>10?t.due:t.due+'T23:59',e=vnWall(new Date(dueTs(st)+30*60000));
+   L.push('BEGIN:VEVENT','UID:task-'+t.id+'@kanban','DTSTAMP:'+stamp,'DTSTART;TZID='+ICS_TZ+':'+icsDT(st),'DTEND;TZID='+ICS_TZ+':'+icsDT(dtLocal(e)),'SUMMARY:'+icsEsc('⏰ Hạn: '+t.title),'DESCRIPTION:'+icsEsc(b.name+(t.desc?' — '+t.desc:'')),...alarm(t.remind||0,'Sắp đến hạn: '+t.title),'END:VEVENT');n++;
   });
   (b.events||[]).forEach(ev=>{
    let d=parseDay(ev.from);const end=parseDay(ev.to);let k=0;while(d<=end&&k<7&&!ev.days.includes(d.getDay())){d=addDay(d,1);k++}
    if(d>end)return;const d0=ymd(d),once=ev.from===ev.to,rm=ev.remind==null?15:ev.remind;
    const ex=[...(ev.skip||[]),...Object.keys(ev.overrides||{})].filter(x=>x>=ev.from&&x<=ev.to);
-   L.push('BEGIN:VEVENT','UID:event-'+ev.id+'@kanban','DTSTAMP:'+stamp,'DTSTART:'+icsDT(d0+'T'+ev.start),'DTEND:'+icsDT(d0+'T'+ev.end),'SUMMARY:'+icsEsc(ev.title));
+   L.push('BEGIN:VEVENT','UID:event-'+ev.id+'@kanban','DTSTAMP:'+stamp,'DTSTART;TZID='+ICS_TZ+':'+icsDT(d0+'T'+ev.start),'DTEND;TZID='+ICS_TZ+':'+icsDT(d0+'T'+ev.end),'SUMMARY:'+icsEsc(ev.title));
    if(ev.place)L.push('LOCATION:'+icsEsc(ev.place));
-   if(!once)L.push('RRULE:FREQ=WEEKLY;BYDAY='+[...ev.days].sort((a,b)=>((a+6)%7)-((b+6)%7)).map(x=>ICS_DAY[x]).join(',')+';UNTIL='+ev.to.replace(/-/g,'')+'T235959');
-   ex.forEach(x=>L.push('EXDATE:'+icsDT(x+'T'+ev.start)));
+   if(!once)L.push('RRULE:FREQ=WEEKLY;BYDAY='+[...ev.days].sort((a,b)=>((a+6)%7)-((b+6)%7)).map(x=>ICS_DAY[x]).join(',')+';UNTIL='+icsUtc(ev.to+'T23:59'));
+   ex.forEach(x=>L.push('EXDATE;TZID='+ICS_TZ+':'+icsDT(x+'T'+ev.start)));
    L.push(...alarm(rm,'Sắp bắt đầu: '+ev.title),'END:VEVENT');n++;
    Object.entries(ev.overrides||{}).forEach(([day,o])=>{if(day<ev.from||day>ev.to||(ev.skip||[]).includes(day))return;L.push('BEGIN:VEVENT','UID:event-'+ev.id+'-'+day+'@kanban','DTSTAMP:'+stamp,'DTSTART:'+icsDT(day+'T'+o.start),'DTEND:'+icsDT(day+'T'+o.end),'SUMMARY:'+icsEsc(ev.title),...((o.place||ev.place)?['LOCATION:'+icsEsc(o.place||ev.place)]:[]),...alarm(rm,'Sắp bắt đầu: '+ev.title),'END:VEVENT');n++});
   });

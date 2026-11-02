@@ -12,7 +12,7 @@ function buildStats(b){
  h+='<div class="st-sec"><h3>Công việc theo cột</h3>'+barRows(byCol,Math.max(1,...byCol.map(r=>r.value)))+'</div>';
  const pr=[['Cao','#d65363'],['Trung bình','#f0a43c'],['Thấp','#53b99a']].map(([p,c])=>({label:'Ưu tiên '+p.toLowerCase(),value:tasks.filter(t=>t.priority===p).length,color:c,note:tasks.filter(t=>t.priority===p&&isDone(b,t)).length+' xong'}));
  h+='<div class="st-sec"><h3>Theo mức ưu tiên</h3>'+barRows(pr,Math.max(1,...pr.map(r=>r.value)))+'</div>';
- const today=parseDay(vnToday()),days=[...Array(7)].map((_,i)=>addDay(today,i-6)),counts=days.map(d=>done.filter(t=>t.doneAt&&ymd(new Date(t.doneAt))===ymd(d)).length),mx=Math.max(1,...counts);
+ const today=parseDay(vnToday()),days=[...Array(7)].map((_,i)=>addDay(today,i-6)),counts=days.map(d=>done.filter(t=>t.doneAt&&vnDayFmt.format(new Date(t.doneAt))===ymd(d)).length),mx=Math.max(1,...counts);
  h+='<div class="st-sec"><h3>Hoàn thành trong 7 ngày gần đây</h3><div class="day-bars">'+days.map((d,i)=>'<div class="day-bar'+(i===6?' today':'')+'"><span class="db-val">'+counts[i]+'</span><div class="db-fill" style="height:'+Math.round(counts[i]/mx*92)+'px"></div><span class="db-label">'+(i===6?'Hôm nay':dayShort(d))+'<br>'+dm(d)+'</span></div>').join('')+'</div></div>';
  if(b.type==='team'&&b.sprints.length){const rows=b.sprints.map(sp=>{const ss=sprintStat(b,sp.id);return'<div class="bar-row"><span class="bar-label" title="'+esc(sp.name)+'">'+esc(sp.name)+'</span><div class="bar-track"><span style="width:'+ss.pct+'%;background:#53b99a"></span></div><span class="bar-val">'+ss.dn+'/'+ss.n+' <small>'+ss.pct+'%</small></span></div>'}).join('');h+='<div class="st-sec"><h3>Tiến độ theo sprint</h3>'+rows+'</div>'}
  if(b.type==='team'){

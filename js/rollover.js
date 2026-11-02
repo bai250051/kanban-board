@@ -10,7 +10,7 @@ function pendingRollover(){
  }));
  return out.sort((x,y)=>dueTs(x.t.due)-dueTs(y.t.due));
 }
-function rolledDue(t){const today=vnToday(),tm=t.due.length>10?t.due.slice(11,16):'23:59',cand=today+'T'+tm;return new Date(cand).getTime()<Date.now()?today+'T23:59':cand}
+function rolledDue(t){const today=vnToday(),tm=t.due.length>10?t.due.slice(11,16):'23:59',cand=today+'T'+tm;return dueTs(cand)<Date.now()?today+'T23:59':cand}
 const daysLate=t=>Math.round((parseDay(vnToday())-parseDay(t.due.slice(0,10)))/86400000);
 function roApply(it,act){
  const{b,t}=it;if(it.res)return;

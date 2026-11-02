@@ -675,3 +675,15 @@ html[data-theme=dark] .side-board:hover{background:#1b1a2b}
  .modal-backdrop.open,.modal-backdrop.open .modal,.notification-panel.open,#nameField{animation:none!important}
  .top-actions .icon-btn,.top-actions .icon-btn *{transition:none!important}
 }
+
+/* Sprint 4: nút đổi thứ tự cột điểm, ô giả định ẩn, điểm TB học kỳ, sao lưu */
+.calc-in label[hidden]{display:none}
+.gt-move{display:flex;gap:4px;justify-content:center;margin-top:6px}
+.gt-move button{width:28px;height:22px;border-radius:6px;background:#eef0f6;color:#586176;font-size:10px;font-weight:800;line-height:1}
+.gt-move button:hover:not(:disabled){background:#e2e6f3;color:var(--ink)}
+.gt-move button:disabled{opacity:.3;cursor:default}
+html[data-theme=dark] .gt-move button{background:#252b3a;color:#aab3cc}
+html[data-theme=dark] .gt-move button:hover:not(:disabled){background:#2f3750;color:#e8ecf6}
+#gpaBox{margin-bottom:16px}#gpaBox .big-kpi{max-width:440px}.gpa-empty{margin:0}
+.course-credits{width:62px;border:1px solid #dfe3ec;border-radius:8px;padding:7px 8px;text-align:center}
+html[data-theme=dark] .course-credits{border:1px solid #35405a}
