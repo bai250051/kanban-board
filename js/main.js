@@ -78,7 +78,7 @@ function runSplash(done){
  timers.push(setTimeout(finish,reduce?500:2700));
  $('splashSkip').onclick=finish;document.addEventListener('keydown',onKey);
 }
-(function init(){const email=localStorage.getItem(KEY_SESSION),u=email&&getUsers()[email];if(u){enterApp(u);runSplash(function(){})}else{setAuthMode(pendingJoin?'register':'login');runSplash(showLogin)}})();
+(async function init(){let u=null;try{u=await Store.session()}catch(e){}if(u){enterApp(u);runSplash(function(){})}else{setAuthMode(pendingJoin?'register':'login');runSplash(showLogin)}})();
 
 
 /* ---------- Chuyển cảnh mượt khi chọn mục ---------- */

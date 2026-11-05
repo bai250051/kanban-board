@@ -687,3 +687,14 @@ html[data-theme=dark] .gt-move button:hover:not(:disabled){background:#2f3750;co
 #gpaBox{margin-bottom:16px}#gpaBox .big-kpi{max-width:440px}.gpa-empty{margin:0}
 .course-credits{width:62px;border:1px solid #dfe3ec;border-radius:8px;padding:7px 8px;text-align:center}
 html[data-theme=dark] .course-credits{border:1px solid #35405a}
+
+/* Sprint 5: mời bằng mã số, lời mời trong chuông */
+[data-local-only][hidden],.server-only[hidden]{display:none !important}
+.invite-list:empty{display:none}
+.invite-item{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.45}
+.invite-item .inv-actions{display:flex;gap:8px;margin-top:8px}
+.invite-item button{padding:5px 12px;border-radius:8px;font-weight:800;font-size:12px}
+.invite-item .inv-yes{background:var(--primary,#6759e8);color:#fff}
+.invite-item .inv-no{background:#eef0f6;color:#586176}
+html[data-theme=dark] .invite-item .inv-no{background:#252b3a;color:#aab3cc}
+.pending-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px}.pending-row .m-del{margin-left:auto}

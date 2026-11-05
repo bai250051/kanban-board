@@ -28,9 +28,9 @@ function parseJoinHash(){const m=location.hash.match(/^#join=(.+)$/);if(!m)retur
 function renderMembers(){
  const b=board(),isOwner=b.owner===user.email;$('memberCount').textContent=b.members.length;
  $('memberList').innerHTML=b.members.map((m,i)=>'<div class="member-row"><div class="mini-avatar '+(m.color||COLORS[i%4])+'">'+esc(initials(m.name))+'</div><span class="m-name">'+esc(m.name)+(m.id===user.email?' (tôi)':'')+'</span><span class="m-role">'+(m.id===b.owner?'Trưởng nhóm':'Thành viên')+'</span>'+(isOwner&&m.id!==b.owner?'<button class="m-del" data-rm="'+esc(m.id)+'" title="Xóa khỏi nhóm" aria-label="Xóa khỏi nhóm">×</button>':'')+'</div>').join('');
- $('memberList').querySelectorAll('[data-rm]').forEach(btn=>btn.onclick=()=>{b.tasks.forEach(t=>{if(t.assignee===btn.dataset.rm)t.assignee=''});b.members=b.members.filter(m=>m.id!==btn.dataset.rm);renderMembers();$('inviteLink').value=makeInviteLink(b);render()});
+ $('memberList').querySelectorAll('[data-rm]').forEach(btn=>btn.onclick=async()=>{const rid=btn.dataset.rm;if(typeof serverMode==='function'&&serverMode()){flushSave();await Store.idle();try{await Store.removeMember(b.id,rid)}catch(e){showToast('Không gỡ được thành viên này');return}}b.tasks.forEach(t=>{if(t.assignee===rid)t.assignee=''});b.members=b.members.filter(m=>m.id!==rid);renderMembers();if(!(typeof serverMode==='function'&&serverMode()))$('inviteLink').value=makeInviteLink(b);render()});
 }
-function openInvite(){const b=board();if(b.type!=='team')return;$('inviteLink').value=makeInviteLink(b);$('addMemberName').value='';renderMembers();openModal('inviteModal')}
+function openInvite(){const b=board();if(b.type!=='team')return;if(typeof serverMode==='function'&&serverMode()){openServerInvite(b);return}$('inviteLink').value=makeInviteLink(b);$('addMemberName').value='';renderMembers();openModal('inviteModal')}
 $('inviteBtn').onclick=openInvite;
 $('copyInvite').onclick=async()=>{const inp=$('inviteLink');try{await navigator.clipboard.writeText(inp.value)}catch(e){inp.select();document.execCommand('copy')}showToast('Đã sao chép liên kết mời')};
 $('inviteLink').onfocus=e=>e.target.select();

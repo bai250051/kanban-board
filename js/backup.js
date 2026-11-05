@@ -39,17 +39,17 @@ async function importBackup(file){
   const err=backupError(o);if(err){showToast(err);return}
   const nB=o.data.boards.length,nT=o.data.boards.reduce((s,b)=>s+b.tasks.length,0),nF=Object.keys(o.files||{}).length;
   const when=o.exportedAt?new Date(o.exportedAt).toLocaleString('vi-VN',{timeZone:VN_TZ}):'không rõ';
-  if(!confirm('Nhập bản sao lưu gồm '+nB+' bảng, '+nT+' thẻ, '+nF+' file (xuất lúc '+when+')?\n\nToàn bộ dữ liệu hiện tại của tài khoản này sẽ bị thay thế. Nếu muốn giữ lại, hãy xuất một bản sao lưu trước.'))return;
+  if(!confirm('Nhập bản sao lưu gồm '+nB+' bảng, '+nT+' thẻ, '+nF+' file (xuất lúc '+when+')?\n\nToàn bộ dữ liệu hiện tại của tài khoản này sẽ bị thay thế. Nếu muốn giữ lại, hãy xuất một bản sao lưu trước.'+(Store.name==='supabase'?'\n\nLưu ý: dữ liệu được lưu trên máy chủ; bảng nhóm bạn là chủ mà không có trong file này sẽ bị xóa khỏi máy chủ.':'')))return;
   let raw=JSON.stringify(o.data);const old=o.user&&o.user.email;
   if(old&&old!==user.email)raw=raw.split(JSON.stringify(old)).join(JSON.stringify(user.email));
   let restored=0;
   for(const id of Object.keys(o.files||{})){const f=o.files[id];if(!f||typeof f.dataUrl!=='string'||!f.dataUrl.startsWith('data:'))continue;try{await FileStore.put(id,await dataUrlToBlob(f.dataUrl));restored++}catch(e){}}
   clearTimeout(saveTimer);saveTimer=null;
-  localStorage.setItem(dataKey(user.email),raw);
-  db=loadDb();viewMode='board';zoomDay=null;
+  await Store.save(user,JSON.parse(raw));
+  db=await loadDb();viewMode='board';zoomDay=null;
   closeModals();render();renderGrades();
   showToast('Đã nhập '+nB+' bảng, '+nT+' thẻ'+(restored?', '+restored+' file đính kèm':''));
- }catch(e){showToast('Nhập dữ liệu không thành công')}
+ }catch(e){console.error('Nhập dữ liệu lỗi:',e&&(e.message||e));showToast('Nhập dữ liệu không thành công'+(e&&e.message?': '+e.message:''))}
 }
 $('exportJson').onclick=exportBackup;
 $('importJsonBtn').onclick=()=>$('importJson').click();

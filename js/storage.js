@@ -1,4 +1,7 @@
-/* Dữ liệu (localStorage) và đăng nhập mô phỏng */
+/* Dữ liệu, đăng nhập và lớp Store (chọn kho lưu trữ: cục bộ hoặc máy chủ) */
+const Store=(typeof KANBAN_CONFIG!=='undefined'&&KANBAN_CONFIG.backend==='supabase'&&typeof SupabaseStore!=='undefined')?SupabaseStore:LocalStore;
+const FileStore=Store.files;
+const AUTH_ERR={exists:'Email này đã được đăng ký.',invalid:'Email hoặc mật khẩu không đúng.',failed:'Không kết nối được máy chủ, hãy thử lại.',confirm:'Hãy mở email để xác nhận tài khoản rồi đăng nhập.',weak:'Mật khẩu quá yếu, hãy dùng ít nhất 6 ký tự.'};
 /* ---------- Dữ liệu ---------- */
 function ck(arr){return arr.map((x,i)=>({id:'c'+i+uid(),text:x[0],done:!!x[1]}))}
 function seedDb(u){
@@ -18,16 +21,21 @@ function seedDb(u){
  const personal={id:'b_personal_'+uid(),name:'Kế hoạch cá nhân',desc:'Việc học và việc riêng của mình.',type:'personal',owner:u.email,members:[me],tasks:[
   T('Ôn tập giữa kỳ','Xem lại slide và bài tập các chương.','todo','Cao',u.email,dtOffset(1,19,0),1440,'Học tập',[['Chương 1',true],['Chương 2',false],['Chương 3',false]]),
   T('Dọn góc học tập','','todo','Thấp',u.email,'',0,'',[])]};
- return{boards:[personal,team],current:team.id,seen:{},fired:{}};
+ const demo=Store.name==='local';
+ return{boards:demo?[personal,team]:[personal],current:demo?team.id:personal.id,seen:{},fired:{}};
 }
-function loadDb(){
- let d=null;try{d=JSON.parse(localStorage.getItem(dataKey(user.email))||'null')}catch(e){}
+async function loadDb(){
+ const d0=await Store.load(user);let d=d0;
  if(!d||!Array.isArray(d.boards)||!d.boards.length)d=seedDb(user);
  d.seen=d.seen||{};d.fired=d.fired||{};d.ack=d.ack||{};d.boards.forEach(normalizeBoard);if(!d.boards.some(b=>b.id===d.current))d.current=d.boards[0].id;return d;
 }
 let saveTimer=null,quotaWarned=0;
 function save(){if(!user||!db)return;clearTimeout(saveTimer);saveTimer=setTimeout(flushSave,300)}
-function flushSave(){clearTimeout(saveTimer);saveTimer=null;if(!user||!db)return;try{localStorage.setItem(dataKey(user.email),JSON.stringify(db))}catch(e){if(Date.now()-quotaWarned>8000){quotaWarned=Date.now();showToast('Bộ nhớ trình duyệt đã đầy, thay đổi mới có thể chưa được lưu. Hãy xóa bớt dữ liệu cũ.')}}}
+function flushSave(){
+ clearTimeout(saveTimer);saveTimer=null;if(!user||!db)return;
+ const fail=()=>{if(Date.now()-quotaWarned>8000){quotaWarned=Date.now();showToast('Không lưu được thay đổi mới (bộ nhớ đầy hoặc mất kết nối). Hãy xóa bớt dữ liệu cũ hoặc thử lại.')}};
+ try{const r=Store.save(user,db);if(r&&r.catch)r.catch(fail)}catch(e){fail()}
+}
 window.addEventListener('beforeunload',flushSave);document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave()});
 const COL_COLORS=['#8a93a8','#f0a43c','#53b99a','#6759e8','#e0607a','#4a9de0'];
 const defaultColumns=()=>[{id:'todo',name:'Cần làm',color:COL_COLORS[0]},{id:'doing',name:'Đang làm',color:COL_COLORS[1]},{id:'done',name:'Hoàn thành',color:COL_COLORS[2],done:true}];
@@ -41,30 +49,29 @@ const memberOf=(b,id)=>b.members.find(m=>m.id===id);
 
 /* ---------- Xác thực ---------- */
 let authMode='login';
-const getUsers=()=>{try{return JSON.parse(localStorage.getItem(KEY_USERS)||'{}')}catch(e){return{}}};
-const setUsers=u=>localStorage.setItem(KEY_USERS,JSON.stringify(u));
 function setAuthMode(m){authMode=m;const reg=m==='register';$('loginTab').classList.toggle('active',!reg);$('registerTab').classList.toggle('active',reg);$('nameField').style.display=reg?'grid':'none';$('authTitle').textContent=reg?'Tạo tài khoản mới':'Chào mừng trở lại!';$('authLead').textContent=reg?'Chỉ mất một phút để bắt đầu quản lý công việc.':'Đăng nhập để tiếp tục quản lý công việc của bạn.';$('authSubmit').textContent=reg?'Tạo tài khoản':'Đăng nhập vào bảng';$('authError').textContent=''}
 function showLogin(){$('loginScreen').classList.add('show')}
-function enterApp(u){
- user=u;localStorage.setItem(KEY_SESSION,u.email);$('loginScreen').classList.remove('show');
- db=loadDb();
+async function enterApp(u){
+ user=u;$('loginScreen').classList.remove('show');
+ try{db=await loadDb()}catch(e){user=null;db=null;showToast('Không tải được dữ liệu, hãy thử lại.');showLogin();return false}
  document.querySelector('.avatar').textContent=initials(u.name);document.querySelector('.profile-name').textContent=u.name;
  filters.q='';filters.assignee='all';filters.priority='all';filters.tag='all';filters.sprint='all';$('searchInput').value='';
  render();checkReminders();
  migrateFiles().then(gcFiles);setTimeout(maybeRollover,700);
+ if(typeof startSync==='function')startSync();
  if(pendingJoin){openJoin(pendingJoin)}else maybeGuide();
+ return true;
 }
 $('loginTab').onclick=()=>setAuthMode('login');$('registerTab').onclick=()=>setAuthMode('register');
-$('authForm').addEventListener('submit',e=>{
- e.preventDefault();const email=$('authEmail').value.trim().toLowerCase(),pw=$('authPassword').value,name=$('authName').value.trim(),users=getUsers();
- if(authMode==='register'){
-  if(!name){$('authError').textContent='Vui lòng nhập họ và tên.';return}
-  if(users[email]){$('authError').textContent='Email này đã được đăng ký.';return}
-  users[email]={name,email,password:pw};setUsers(users);enterApp(users[email]);
- }else{
-  const u=users[email];if(!u||u.password!==pw){$('authError').textContent='Email hoặc mật khẩu không đúng.';return}
-  enterApp(u);
- }
- $('authForm').reset();
+$('authForm').addEventListener('submit',async e=>{
+ e.preventDefault();const email=$('authEmail').value.trim().toLowerCase(),pw=$('authPassword').value,name=$('authName').value.trim(),btn=$('authSubmit');
+ if(authMode==='register'&&!name){$('authError').textContent='Vui lòng nhập họ và tên.';return}
+ btn.disabled=true;
+ try{
+  const r=authMode==='register'?await Store.register({name,email,password:pw}):await Store.login({email,password:pw});
+  if(r.error){$('authError').textContent=AUTH_ERR[r.error]||AUTH_ERR.failed;return}
+  if(await enterApp(r.user))$('authForm').reset();else $('authError').textContent=AUTH_ERR.failed;
+ }catch(err){$('authError').textContent=AUTH_ERR.failed}
+ finally{btn.disabled=false}
 });
-$('logoutBtn').onclick=()=>{flushSave();localStorage.removeItem(KEY_SESSION);user=null;db=null;closeModals();$('notificationPanel').classList.remove('open');document.title='Kanban Board';showLogin()};
+$('logoutBtn').onclick=()=>{flushSave();if(typeof stopSync==='function')stopSync();Store.logout();user=null;db=null;closeModals();$('notificationPanel').classList.remove('open');document.title='Kanban Board';showLogin()};

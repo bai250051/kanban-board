@@ -88,17 +88,11 @@ $('ckAdd').onclick=addDraftItem;
 $('ckNew').addEventListener('paste',e=>{const tx=(e.clipboardData||window.clipboardData).getData('text');if(/\r?\n/.test(tx)){e.preventDefault();$('ckNew').value=tx;addDraftItem()}});
 $('ckNew').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addDraftItem()}});
 
-/* ---------- Đính kèm (lưu file trong IndexedDB) ---------- */
-const FileStore=(()=>{
- let dbp=null;
- const open=()=>dbp||(dbp=new Promise((res,rej)=>{try{const r=indexedDB.open('kanban_files',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
- const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('files',mode),rq=fn(t.objectStore('files'));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})};
- return{put:(k,v)=>tx('readwrite',s=>s.put(v,k)),get:k=>tx('readonly',s=>s.get(k)),del:k=>tx('readwrite',s=>s.delete(k)),keys:()=>tx('readonly',s=>s.getAllKeys())};
-})();
+/* ---------- Đính kèm (file lưu qua Store.files) ---------- */
 let draftAtt=[],draftComments=[];
 const MAX_FILE=10*1024*1024,MAX_INLINE=300*1024,escRe=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const fmtSize=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':n<1073741824?(n/1048576).toFixed(1)+' MB':(n/1073741824).toFixed(1)+' GB';
-async function fileBlob(a){if(a.idb){try{return await FileStore.get(a.id)}catch(e){return null}}if(a.data){try{return await(await fetch(a.data)).blob()}catch(e){return null}}return null}
+async function fileBlob(a){if(a.idb){try{return await FileStore.get(a.id,a.scope)}catch(e){return null}}if(a.data){try{return await(await fetch(a.data)).blob()}catch(e){return null}}return null}
 function renderAtt(){
  const box=$('attList');box.innerHTML='';$('attCount').textContent=draftAtt.length?'('+draftAtt.length+')':'';
  draftAtt.forEach((a,i)=>{
@@ -119,7 +113,7 @@ $('attFile').addEventListener('change',async e=>{
   const id=uid();
   try{
    if(navigator.storage&&navigator.storage.estimate){const est=await navigator.storage.estimate();if(est.quota&&est.quota-est.usage<f.size*2){showToast('Bộ nhớ trình duyệt không đủ chỗ cho “'+f.name+'”');continue}}
-   await FileStore.put(id,f);draftAtt.push({id,name:f.name,size:f.size,type:f.type,idb:true});
+   const bd=board(),scope=bd.type==='team'?bd.id:'';await FileStore.put(id,f,scope);draftAtt.push({id,name:f.name,size:f.size,type:f.type,idb:true,scope});
   }catch(err){
    if(f.size<=MAX_INLINE){const data=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(f)});draftAtt.push({id,name:f.name,size:f.size,type:f.type,data})}
    else showToast('Trình duyệt không cho lưu file lớn ở chế độ này. Hãy dùng file dưới 300 KB hoặc dán liên kết.');
@@ -140,8 +134,7 @@ async function migrateFiles(){
 }
 async function gcFiles(){
  try{
-  const keep=new Set();
-  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('kanban_s2_data_')){try{JSON.parse(localStorage.getItem(k)).boards.forEach(bb=>(bb.tasks||[]).forEach(t=>(t.attachments||[]).forEach(a=>keep.add(a.id))))}catch(e){}}}
+  const keep=await Store.fileIdsInUse();if(!keep)return;
   for(const k of await FileStore.keys()){if(!keep.has(k))await FileStore.del(k)}
  }catch(e){}
 }

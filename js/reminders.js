@@ -20,7 +20,7 @@ function mentionItems(){
 }
 function renderNotifications(){
  if(!user)return;
- const items=deadlineItems(),ments=mentionItems(),unread=items.filter(i=>i.state!=='up'&&!db.seen[i.key]&&!(db.ack||{})[i.key]).length+ments.filter(i=>!db.seen[i.key]).length;
+ const items=deadlineItems(),ments=mentionItems(),unread=items.filter(i=>i.state!=='up'&&!db.seen[i.key]&&!(db.ack||{})[i.key]).length+ments.filter(i=>!db.seen[i.key]).length+(typeof pendingInvites!=='undefined'?pendingInvites.length:0);
  const badge=$('notifyCount');badge.hidden=!unread;badge.textContent=unread>9?'9+':unread;
  document.title=(unread?'('+unread+') ':'')+'Kanban Board';
  const groups=[['late','QUÁ HẠN','n-late'],['soon','SẮP ĐẾN HẠN / SẮP DIỄN RA','n-soon'],['up','SẮP TỚI','n-up']];

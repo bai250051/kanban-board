@@ -45,7 +45,7 @@
     <div class="vn-clock" id="vnClock" title="Giờ Việt Nam (GMT+7)"><span class="clock-time" id="clockTime">--:--:--</span><span class="clock-date" id="clockDate"></span></div>
     <div class="top-actions"><button class="icon-btn" id="quickVoice" title="Thêm việc bằng giọng nói" aria-label="Thêm việc bằng giọng nói"><span class="ib-ico">🎙</span><span class="ib-label">Ghi âm</span></button><button class="icon-btn" id="helpBtn" title="Hướng dẫn"><span class="ib-ico">?</span><span class="ib-label">Hướng dẫn</span></button><button class="icon-btn" id="settingsBtn" title="Cài đặt" aria-label="Cài đặt"><span class="ib-ico">⚙</span><span class="ib-label">Cài đặt</span></button>
       <div class="notification-wrap"><button class="icon-btn" id="notifyBtn" title="Thông báo" aria-label="Thông báo" aria-expanded="false"><span class="ib-ico">♧</span><span class="ib-label">Thông báo</span><span class="notify-count" id="notifyCount" hidden></span></button>
-        <div class="notification-panel" id="notificationPanel"><div class="notification-head"><span>Thông báo hạn nộp</span><button id="markReadBtn" type="button">Đánh dấu đã đọc</button></div><div class="notification-list" id="notificationList"></div><div class="notification-foot"><span id="permStatus"></span><button id="permBtn" type="button">Bật nhắc trên trình duyệt</button></div></div></div>
+        <div class="notification-panel" id="notificationPanel"><div class="notification-head"><span>Thông báo hạn nộp</span><button id="markReadBtn" type="button">Đánh dấu đã đọc</button></div><div class="invite-list" id="inviteList"></div><div class="notification-list" id="notificationList"></div><div class="notification-foot"><span id="permStatus"></span><button id="permBtn" type="button">Bật nhắc trên trình duyệt</button></div></div></div>
       <div class="profile"><div class="avatar">AD</div><div><div class="profile-name">Admin Demo</div><div class="profile-role">Thành viên</div><button class="logout-btn" id="logoutBtn">Đăng xuất</button></div></div></div>
   </header>
   <div class="content" id="boardView">
@@ -101,10 +101,12 @@
 <div class="modal-backdrop" id="boardModal" role="dialog" aria-modal="true" aria-labelledby="boardModalTitle"><form class="modal" id="boardForm"><div class="modal-head"><h2 id="boardModalTitle">Tạo bảng mới</h2><button class="close" type="button" data-close>×</button></div><div class="modal-body"><div class="field"><label for="newBoardType">Loại bảng</label><select id="newBoardType"><option value="personal">Cá nhân — chỉ mình tôi</option><option value="team">Nhóm — có thành viên và người phụ trách</option></select></div><div class="field"><label for="newBoardName">Tên bảng *</label><input id="newBoardName" required maxlength="70" placeholder="Ví dụ: Kế hoạch học kỳ"></div><div class="field"><label for="newBoardDesc">Mô tả bảng</label><textarea id="newBoardDesc" placeholder="Bảng này dùng để quản lý công việc gì?"></textarea></div></div><div class="modal-foot"><button class="btn btn-light" type="button" data-close>Hủy</button><button class="btn btn-primary" type="submit">Tạo bảng</button></div></form></div>
 
 <div class="modal-backdrop" id="inviteModal" role="dialog" aria-modal="true" aria-labelledby="inviteTitle"><div class="modal"><div class="modal-head"><h2 id="inviteTitle">Mời thành viên vào nhóm</h2><button class="close" type="button" data-close>×</button></div><div class="modal-body">
-  <div class="field"><label for="inviteLink">Liên kết mời</label><div class="invite-box"><input id="inviteLink" readonly><button class="btn btn-primary" id="copyInvite" type="button">Sao chép</button></div></div>
-  <div class="note">Bản demo chưa có máy chủ: liên kết mang theo bản sao của bảng tại thời điểm bạn mời. Người nhận mở liên kết, đăng nhập rồi chọn “Tham gia”. Đồng bộ thời gian thực sẽ làm ở sprint sau.</div>
-  <div class="field"><label for="addMemberName">Thêm nhanh thành viên theo tên</label><div class="invite-box"><input id="addMemberName" maxlength="40" placeholder="Ví dụ: Trần Minh Khoa"><button class="btn btn-light" id="addMemberBtn" type="button">＋ Thêm</button></div></div>
-  <div class="field"><label>Thành viên (<span id="memberCount">0</span>)</label><div class="member-list" id="memberList"></div></div>
+  <div class="field" data-local-only><label for="inviteLink">Liên kết mời</label><div class="invite-box"><input id="inviteLink" readonly><button class="btn btn-primary" id="copyInvite" type="button">Sao chép</button></div></div>
+  <div class="note" data-local-only>Bản demo chưa có máy chủ: liên kết mang theo bản sao của bảng tại thời điểm bạn mời. Người nhận mở liên kết, đăng nhập rồi chọn “Tham gia”. Đồng bộ thời gian thực sẽ làm ở sprint sau.</div>
+  <div class="field" data-local-only><label for="addMemberName">Thêm nhanh thành viên theo tên</label><div class="invite-box"><input id="addMemberName" maxlength="40" placeholder="Ví dụ: Trần Minh Khoa"><button class="btn btn-light" id="addMemberBtn" type="button">＋ Thêm</button></div></div>
+  <div class="field server-only" id="inviteNoField" hidden><label for="inviteNo">Mời bằng mã số thành viên</label><div class="invite-box"><input id="inviteNo" inputmode="numeric" maxlength="12" placeholder="Ví dụ: 12"><button class="btn btn-primary" id="inviteNoBtn" type="button">Tìm và mời</button></div><div class="voice-hint" id="inviteNoMsg">Hỏi người cần mời mã số thành viên của họ (hiện trong Cài đặt). Họ cần mở web và chấp nhận lời mời.</div></div>
+   <div class="field server-only" id="pendingInvField" hidden><label>Lời mời đang chờ phản hồi</label><div class="member-list" id="pendingInvList"></div></div>
+   <div class="field"><label>Thành viên (<span id="memberCount">0</span>)</label><div class="member-list" id="memberList"></div></div>
  </div><div class="modal-foot"><button class="btn btn-primary" type="button" data-close>Xong</button></div></div></div>
 
 <div class="modal-backdrop" id="joinModal" role="dialog" aria-modal="true" aria-labelledby="joinTitle"><div class="modal"><div class="modal-head"><h2 id="joinTitle">Lời mời tham gia nhóm</h2><button class="close" type="button" data-close>×</button></div><div class="modal-body"><p id="joinText" style="margin:0"></p></div><div class="modal-foot"><button class="btn btn-light" type="button" data-close>Để sau</button><button class="btn btn-primary" id="joinBtn" type="button">Tham gia nhóm</button></div></div></div>
@@ -121,6 +123,7 @@
  </div><div class="modal-foot"><button class="btn btn-danger" id="evDelete" type="button" style="margin-right:auto" hidden>🗑 Xóa cả chuỗi</button><button class="btn btn-light" id="evSkip" type="button" hidden>Nghỉ buổi này</button><button class="btn btn-light" type="button" data-close>Hủy</button><button class="btn btn-primary" type="submit">Lưu lịch</button></div></form></div>
 
 <div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><div class="modal"><div class="modal-head"><h2 id="settingsTitle">Cài đặt</h2><button class="close" type="button" data-close>×</button></div><div class="modal-body">
+   <div class="field server-only" id="accountField" hidden><label>Tài khoản</label><div class="note"><div>Họ tên: <b id="accName"></b></div><div>Mã số thành viên: <b id="accNo"></b> <button type="button" class="btn btn-light" id="copyNo" style="padding:4px 10px;margin-left:6px">Sao chép</button></div><div style="margin-top:6px">Đưa mã số này cho trưởng nhóm để được mời vào nhóm.</div></div></div>
   <div class="field"><label>Giao diện</label><div class="theme-grid">
    <button type="button" class="theme-card" data-theme-choice="light" aria-pressed="true"><div class="theme-preview light"><i></i><i></i><i></i></div><span class="theme-name">☀ Sáng</span></button>
    <button type="button" class="theme-card" data-theme-choice="dark" aria-pressed="false"><div class="theme-preview dark"><i></i><i></i><i></i></div><span class="theme-name">🌙 Tối</span></button>
@@ -146,6 +149,8 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script src="js/core.js"></script>
+<script src="js/config.js"></script>
+<script src="js/store-local.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/board.js"></script>
 <script src="js/week.js"></script>
@@ -157,6 +162,7 @@
 <script src="js/voice.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/backup.js"></script>
+<script src="js/sync.js"></script>
 <script src="js/rollover.js"></script>
 <script src="js/grades.js"></script>
 <script src="js/main.js"></script>
