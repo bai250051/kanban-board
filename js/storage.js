@@ -1,7 +1,7 @@
 /* Dữ liệu, đăng nhập và lớp Store (chọn kho lưu trữ: cục bộ hoặc máy chủ) */
 const Store=(typeof KANBAN_CONFIG!=='undefined'&&KANBAN_CONFIG.backend==='supabase'&&typeof SupabaseStore!=='undefined')?SupabaseStore:LocalStore;
 const FileStore=Store.files;
-const AUTH_ERR={exists:'Email này đã được đăng ký.',invalid:'Email hoặc mật khẩu không đúng.',failed:'Không kết nối được máy chủ, hãy thử lại.',confirm:'Hãy mở email để xác nhận tài khoản rồi đăng nhập.',weak:'Mật khẩu quá yếu, hãy dùng ít nhất 6 ký tự.'};
+const AUTH_ERR={exists:'Email này đã được đăng ký.',invalid:'Email hoặc mật khẩu không đúng.',failed:'Không kết nối được máy chủ, hãy thử lại.',confirm:'Hãy mở email để xác nhận tài khoản rồi đăng nhập.',weak:'Mật khẩu quá yếu, hãy dùng ít nhất 6 ký tự.',profile:'Đăng nhập được nhưng chưa đọc được hồ sơ tài khoản. Hãy kiểm tra đã chạy schema.sql trong Supabase chưa.'};
 /* ---------- Dữ liệu ---------- */
 function ck(arr){return arr.map((x,i)=>({id:'c'+i+uid(),text:x[0],done:!!x[1]}))}
 function seedDb(u){
@@ -69,9 +69,9 @@ $('authForm').addEventListener('submit',async e=>{
  btn.disabled=true;
  try{
   const r=authMode==='register'?await Store.register({name,email,password:pw}):await Store.login({email,password:pw});
-  if(r.error){$('authError').textContent=AUTH_ERR[r.error]||AUTH_ERR.failed;return}
+  if(r.error){$('authError').textContent=(AUTH_ERR[r.error]||AUTH_ERR.failed)+((r.error==='failed'||r.error==='profile')&&r.detail?' ['+r.detail+']':'');return}
   if(await enterApp(r.user))$('authForm').reset();else $('authError').textContent=AUTH_ERR.failed;
- }catch(err){$('authError').textContent=AUTH_ERR.failed}
+ }catch(err){$('authError').textContent=AUTH_ERR.failed+(err&&err.message?' ['+err.message+']':'')}
  finally{btn.disabled=false}
 });
 $('logoutBtn').onclick=()=>{flushSave();if(typeof stopSync==='function')stopSync();Store.logout();user=null;db=null;closeModals();$('notificationPanel').classList.remove('open');document.title='Kanban Board';showLogin()};

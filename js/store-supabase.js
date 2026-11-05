@@ -22,6 +22,7 @@ const SupabaseStore=(()=>{
  }
  const authError=e=>{
   const m=((e&&(e.code||''))+' '+(e&&e.message||'')).toLowerCase();
+  if(m.includes('database error'))return'profile';
   if(m.includes('already')||m.includes('exists'))return'exists';
   if(m.includes('invalid')&&m.includes('credential'))return'invalid';
   if(m.includes('not_confirmed')||m.includes('not confirmed'))return'confirm';
@@ -224,15 +225,15 @@ const SupabaseStore=(()=>{
   async session(){const {data}=await sb.auth.getSession();if(!data.session)return null;return await toUser(data.session.user)},
   async register({name,email,password}){
    const {data,error}=await sb.auth.signUp({email,password,options:{data:{name}}});
-   if(error)return{error:authError(error)};
+   if(error)return{error:authError(error),detail:error.message||error.code};
    if(data.user&&data.user.identities&&data.user.identities.length===0)return{error:'exists'};
    if(!data.session)return{error:'confirm'};
-   return{user:await toUser(data.session.user)};
+   try{return{user:await toUser(data.session.user)}}catch(e){return{error:'profile',detail:(e&&(e.message||e.code))||String(e)}}
   },
   async login({email,password}){
    const {data,error}=await sb.auth.signInWithPassword({email,password});
-   if(error)return{error:authError(error)};
-   return{user:await toUser(data.user)};
+   if(error)return{error:authError(error),detail:error.message||error.code};
+   try{return{user:await toUser(data.user)}}catch(e){return{error:'profile',detail:(e&&(e.message||e.code))||String(e)}}
   },
   async logout(){unsubscribe();known.clear();lastRootJson='';me=null;await sb.auth.signOut()},
   load,save,files,
