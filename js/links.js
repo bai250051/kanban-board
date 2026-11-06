@@ -35,12 +35,14 @@ function lkInitialStatus(tb,tt,pb){
  const open=lkOpenCols(pb),idx=cols(tb).findIndex(c=>c.id===tt.status);
  return((idx>0&&open[1])||open[0]||cols(pb)[0]).id;
 }
-function linkTask(tb,tt,pb){
+function linkTask(tb,tt,pb,auto){
  const ex=linkOf(tb.id,tt.id);if(ex)return ex.pt;
+ if(db.autoSkip)delete db.autoSkip[tb.id+':'+tt.id];     // người dùng chủ động thêm lại thì bỏ dấu "đã gỡ"
  const st=lkInitialStatus(tb,tt,pb),done=isDone(tb,tt);
  const pt={id:uid(),title:tt.title,desc:tt.desc||'',status:st,priority:tt.priority||'Trung bình',assignee:user.email,due:tt.due||'',remind:tt.remind==null?1440:tt.remind,tag:tt.tag||'',tagColor:tt.tagColor||'',sprint:'',comments:[],attachments:[],
   checklist:(tt.checklist||[]).map(x=>({id:uid(),text:x.text,done:!!x.done})),
   link:{boardId:tb.id,boardName:tb.name,taskId:tt.id,snap:lkSnap(tt),done}};
+ if(auto)pt.link.auto=true;
  setStatus(pb,pt,st);
  if(done&&tt.doneAt&&isDone(pb,pt))pt.doneAt=tt.doneAt;
  pb.tasks.unshift(pt);
@@ -58,8 +60,41 @@ function lkSetDone(b,t,done,l,prevKey,reopenIdx){
  }
  return true;
 }
+/* Tự động: việc nhóm giao cho mình (chưa xong) tự có thẻ cá nhân. Việc người dùng đã gỡ thì không tự thêm lại.
+   Thẻ do tự động thêm (link.auto) sẽ được gỡ khi việc nhóm giao cho người khác. Tắt trong Cài đặt: db.autoLink=false. */
+function lkNoteRemoved(pt){if(pt&&pt.link){db.autoSkip=db.autoSkip||{};db.autoSkip[pt.link.boardId+':'+pt.link.taskId]=1}}
+function lkAutoSync(){
+ if(db.autoLink===false)return false;
+ const pbs=personalBoardsOf();if(!pbs.length)return false;
+ db.autoSkip=db.autoSkip||{};
+ const teams=teamBoardsOf();let added=0,removed=0;
+ pbs.forEach(p=>{
+  const keep=p.tasks.filter(t=>{
+   const l=t.link;if(!l||!l.auto||l.lost)return true;
+   const tb=teams.find(b=>b.id===l.boardId),tt=tb&&tb.tasks.find(x=>x.id===l.taskId);
+   if(!tt||tt.assignee===user.email||isDone(p,t))return true;
+   removed++;return false;
+  });
+  if(keep.length!==p.tasks.length)p.tasks=keep;
+ });
+ const linked=linkedKeys();
+ teams.forEach(tb=>tb.tasks.forEach(tt=>{
+  const k=tb.id+':'+tt.id;
+  if(tt.assignee!==user.email||isDone(tb,tt)||linked.has(k)||db.autoSkip[k])return;
+  linkTask(tb,tt,pbs[0],true);added++;
+ }));
+ if(added||removed)showToast((added?'Đã tự thêm '+added+' việc nhóm vào “'+pbs[0].name+'”':'')+(added&&removed?'. ':'')+(removed?removed+' việc đã giao cho người khác nên được gỡ khỏi bảng cá nhân':''));
+ return !!(added||removed);
+}
+function refreshAutoLinkUI(){const c=$('autoLinkChk');if(c&&db)c.checked=db.autoLink!==false}
+$('autoLinkChk').onchange=e=>{
+ db.autoLink=e.target.checked;
+ if(db.autoLink)render();else save();
+ showToast(db.autoLink?'Đã bật tự thêm việc nhóm vào bảng cá nhân':'Đã tắt. Các thẻ đã thêm vẫn giữ nguyên, việc mới sẽ không tự thêm');
+};
 function syncLinks(){
  if(!db)return false;
+ lkAutoSync();
  const teams=teamBoardsOf();let changed=false;
  personalBoardsOf().forEach(pb=>pb.tasks.forEach(pt=>{
   const l=pt.link;if(!l)return;
@@ -98,10 +133,10 @@ function lkBadge(t,b){
 }
 
 /* ---------- Giao diện: khung liên kết trong cửa sổ công việc ---------- */
-function unlinkTask(pb,pt){pushUndo();delete pt.link;render();refreshLinkField(board(),pt);showToast('Đã gỡ liên kết, thẻ này giờ là việc riêng',true)}
+function unlinkTask(pb,pt){pushUndo();lkNoteRemoved(pt);delete pt.link;render();refreshLinkField(board(),pt);showToast('Đã gỡ liên kết, thẻ này giờ là việc riêng',true)}
 function removeLinkedCopy(pb,pt,tt){
  if(!confirm('Gỡ việc này khỏi bảng cá nhân “'+pb.name+'”? Việc trong nhóm vẫn giữ nguyên.'))return;
- pushUndo();pb.tasks=pb.tasks.filter(x=>x!==pt);render();refreshLinkField(board(),tt);showToast('Đã gỡ khỏi bảng cá nhân',true);
+ pushUndo();lkNoteRemoved(pt);pb.tasks=pb.tasks.filter(x=>x!==pt);render();refreshLinkField(board(),tt);showToast('Đã gỡ khỏi bảng cá nhân',true);
 }
 function refreshLinkField(b,t){
  const f=$('linkField');if(!f)return;

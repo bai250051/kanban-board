@@ -60,7 +60,7 @@ $('taskForm').addEventListener('submit',e=>{
 $('deleteTaskBtn').onclick=()=>{
  const btn=$('deleteTaskBtn');
  if(!taskDeleteArmed){taskDeleteArmed=true;btn.classList.add('armed');btn.textContent='Bấm lần nữa để xóa';setTimeout(()=>{taskDeleteArmed=false;resetDeleteBtn()},3500);return}
- const b=board();pushUndo();b.tasks=b.tasks.filter(t=>t.id!==editId);closeModals();render();showToast('Đã xóa công việc',true);
+ const b=board();pushUndo();if(typeof lkNoteRemoved==='function')lkNoteRemoved(b.tasks.find(t=>t.id===editId));b.tasks=b.tasks.filter(t=>t.id!==editId);closeModals();render();showToast('Đã xóa công việc',true);
 };
 
 /* ---------- Checklist ---------- */

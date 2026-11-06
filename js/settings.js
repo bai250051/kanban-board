@@ -6,11 +6,12 @@ const ICS_TZ='Asia/Ho_Chi_Minh',icsUtc=x=>new Date(dueTs(x)+59000).toISOString()
 const icsLine=l=>{const o=[];while(l.length>73){o.push(l.slice(0,73));l=' '+l.slice(73)}o.push(l);return o.join('\r\n')};
 const ICS_DAY=['SU','MO','TU','WE','TH','FR','SA'];
 function buildICS(){
+ const linkedK=typeof linkedKeys==='function'?linkedKeys():new Set();
  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kanban Board//VI','CALSCALE:GREGORIAN','X-WR-CALNAME:Kanban Board','BEGIN:VTIMEZONE','TZID:'+ICS_TZ,'BEGIN:STANDARD','DTSTART:19700101T000000','TZOFFSETFROM:+0700','TZOFFSETTO:+0700','TZNAME:ICT','END:STANDARD','END:VTIMEZONE'],stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';let n=0;
  const alarm=(m,txt)=>m>0?['BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(txt),'TRIGGER:-PT'+m+'M','END:VALARM']:[];
  db.boards.forEach(b=>{
   b.tasks.forEach(t=>{
-   if(!t.due||isDone(b,t)||(b.type==='team'&&t.assignee&&t.assignee!==user.email))return;
+   if(!t.due||isDone(b,t)||(b.type==='team'&&t.assignee&&t.assignee!==user.email)||(b.type==='team'&&linkedK.has(b.id+':'+t.id)))return;
    const st=t.due.length>10?t.due:t.due+'T23:59',e=vnWall(new Date(dueTs(st)+30*60000));
    L.push('BEGIN:VEVENT','UID:task-'+t.id+'@kanban','DTSTAMP:'+stamp,'DTSTART;TZID='+ICS_TZ+':'+icsDT(st),'DTEND;TZID='+ICS_TZ+':'+icsDT(dtLocal(e)),'SUMMARY:'+icsEsc('⏰ Hạn: '+t.title),'DESCRIPTION:'+icsEsc(b.name+(t.desc?' — '+t.desc:'')),...alarm(t.remind||0,'Sắp đến hạn: '+t.title),'END:VEVENT');n++;
   });
@@ -43,7 +44,7 @@ function applyTheme(t,anim){
  document.querySelectorAll('[data-theme-choice]').forEach(el=>{const on=el.dataset.themeChoice===t;el.classList.toggle('active',on);el.setAttribute('aria-pressed',on?'true':'false')});
 }
 document.querySelectorAll('[data-theme-choice]').forEach(el=>el.onclick=()=>{applyTheme(el.dataset.themeChoice,true);showToast(el.dataset.themeChoice==='dark'?'Đã chuyển sang giao diện tối':'Đã chuyển sang giao diện sáng')});
-const openSettings=()=>{$('sidebar').classList.remove('open');openModal('settingsModal');updateStorageInfo()};
+const openSettings=()=>{$('sidebar').classList.remove('open');if(typeof refreshAutoLinkUI==='function')refreshAutoLinkUI();openModal('settingsModal');updateStorageInfo()};
 $('settingsBtn').onclick=openSettings;$('sideSettings').onclick=openSettings;
 applyTheme(getTheme(),false);
 ['evStart','evEnd','evOneStart','evOneEnd'].forEach(id=>tpInit($(id),$(id+'Tp')));dueInit();
