@@ -1,10 +1,11 @@
 /* Thông báo hạn nộp và nhắc việc */
 /* ---------- Thông báo hạn nộp (kiểu Edux) ---------- */
 function deadlineItems(){
- const now=Date.now(),out=[];
+ const now=Date.now(),out=[],linked=typeof linkedKeys==='function'?linkedKeys():new Set();
  db.boards.forEach(b=>b.tasks.forEach(t=>{
   if(isDone(b,t)||!t.due)return;
   if(b.type==='team'&&t.assignee!==user.email)return;
+  if(b.type==='team'&&linked.has(b.id+':'+t.id))return;   // đã có thẻ cá nhân: chỉ nhắc ở thẻ cá nhân
   const ts=dueTs(t.due);if(isNaN(ts))return;
   const remindMs=(t.remind||0)*60000;let state=null;
   if(ts<now)state='late';else if(remindMs&&ts-now<=remindMs)state='soon';else if(ts-now<=7*86400000)state='up';

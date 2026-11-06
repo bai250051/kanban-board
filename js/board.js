@@ -19,6 +19,7 @@ function renderHeader(b){
  const tf=$('tagFilter');tf.hidden=!tags.length;tf.innerHTML='<option value="all">Mọi nhãn</option>'+tags.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
  if(!tags.includes(filters.tag))filters.tag='all';filters.sprint='all';tf.value=filters.tag;
  document.querySelectorAll('.team-only').forEach(el=>el.hidden=!team);
+ document.querySelectorAll('.personal-only').forEach(el=>el.hidden=team);
  if(team){
   document.querySelectorAll('#viewSeg button').forEach(x=>x.classList.toggle('on',x.dataset.view===(b.view||'columns')));
   const sf=$('sprintFilter');sf.hidden=!(b.sprints.length&&b.view!=='sprint');sf.innerHTML='<option value="all">Mọi sprint</option><option value="backlog">Backlog (chưa có sprint)</option>'+b.sprints.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
@@ -46,7 +47,7 @@ function matches(t,b){
  if(b.type==='team'&&filters.assignee!=='all'){if(filters.assignee==='__none'){if(t.assignee)return false}else if(t.assignee!==filters.assignee)return false}
  return true;
 }
-const badges=(t,b)=>{const a=[];if(b&&b.type==='team'&&t.sprint){const sp=sprintOf(b,t.sprint);if(sp)a.push('<span class="sp-badge">🏁 '+esc(sp.name.split(' —')[0])+'</span>')}if((t.comments||[]).length)a.push('💬 '+t.comments.length);if((t.attachments||[]).length)a.push('📎 '+t.attachments.length);return a.length?'<div class="card-badges">'+a.map(x=>x.startsWith('<span')?x:'<span>'+x+'</span>').join('')+'</div>':''};
+const badges=(t,b)=>{const a=[];if(b&&b.type==='team'&&t.sprint){const sp=sprintOf(b,t.sprint);if(sp)a.push('<span class="sp-badge">🏁 '+esc(sp.name.split(' —')[0])+'</span>')}if(typeof lkBadge==='function'){const lk=lkBadge(t,b);if(lk)a.push(lk)}if((t.comments||[]).length)a.push('💬 '+t.comments.length);if((t.attachments||[]).length)a.push('📎 '+t.attachments.length);return a.length?'<div class="card-badges">'+a.map(x=>x.startsWith('<span')?x:'<span>'+x+'</span>').join('')+'</div>':''};
 const tagStyle=t=>t.tagColor?' style="background:'+t.tagColor+'26;color:'+t.tagColor+'"':'';
 function cardHtml(t,b,compact){
  if(compact){
@@ -93,7 +94,7 @@ function renderStats(b){
  $('doneNote').textContent=(n?Math.round(done/n*100):0)+'% tổng công việc';
  $('dueStat').textContent=b.tasks.filter(t=>{if(isDone(b,t)||!t.due)return false;const d=dueTs(t.due)-now;return d>=0&&d<=3*86400000}).length;
 }
-function render(){const b=board();renderSidebar();applyView();renderHeader(b);renderBoard(b);renderStats(b);renderNotifications();save()}
+function render(){if(typeof syncLinks==='function')syncLinks();const b=board();renderSidebar();applyView();renderHeader(b);renderBoard(b);renderStats(b);renderNotifications();save()}
 function moveTask(id,status,beforeId){
  const b=board(),t=b.tasks.find(x=>x.id===id);if(!t||beforeId===id)return;
  const changed=t.status!==status;pushUndo();

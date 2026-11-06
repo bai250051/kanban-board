@@ -40,7 +40,7 @@ function openTask(id=null,status=null,day=null){
  draftChecklist=(t?t.checklist||[]:[]).map(x=>({...x}));renderDraftChecklist();
  draftAtt=(t?t.attachments||[]:[]).map(x=>({...x}));renderAtt();draftComments=[];$('cmText').value='';renderComments();
  $('ckNew').value='';$('voiceStatus').textContent='';$('voiceChip').textContent='';
- $('deleteTaskBtn').hidden=!t;openModal('taskModal');setTimeout(()=>$('taskTitle').focus(),50);
+ $('deleteTaskBtn').hidden=!t;if(typeof refreshLinkField==='function')refreshLinkField(b,t);openModal('taskModal');setTimeout(()=>$('taskTitle').focus(),50);
 }
 function renderTagSwatches(){
  const box=$('tagSwatches');box.innerHTML=TAG_COLORS.map(c=>'<button type="button" class="swatch'+(c===draftTagColor?' on':'')+(c?'':' none')+'"'+(c?' style="background:'+c+'"':'')+' data-c="'+c+'" title="'+(c?'Màu nhãn':'Không màu')+'" aria-label="'+(c?'Màu nhãn':'Không màu')+'"></button>').join('');

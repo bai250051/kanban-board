@@ -698,3 +698,19 @@ html[data-theme=dark] .course-credits{border:1px solid #35405a}
 .invite-item .inv-no{background:#eef0f6;color:#586176}
 html[data-theme=dark] .invite-item .inv-no{background:#252b3a;color:#aab3cc}
 .pending-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px}.pending-row .m-del{margin-left:auto}
+
+/* ---- Liên kết việc nhóm ↔ bảng cá nhân ---- */
+.card-badges .lk-badge{background:#f0edff;color:#5746c9;border-radius:5px;padding:1px 6px;display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.card-badges .lk-badge.lost{background:#fdecee;color:#b8394a}
+html[data-theme=dark] .card-badges .lk-badge{background:#2a2650;color:#a99fff}
+html[data-theme=dark] .card-badges .lk-badge.lost{background:#3a2028;color:#ee8a98}
+.link-box{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:rgba(103,89,232,.04)}
+.link-msg{font-size:12px;line-height:1.55;color:var(--muted)}
+.link-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.link-actions select{padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--ink);font:inherit;font-size:12px}
+.pull-all{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);margin:12px 0 4px;cursor:pointer}
+.pull-row{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 13px;margin-bottom:8px;cursor:pointer}
+.pull-row:hover{border-color:var(--purple)}
+.pull-row input{margin-top:3px;accent-color:var(--purple)}
+.pull-title{font-size:13px;font-weight:750}
+.pull-meta{font-size:11px;color:var(--muted);margin-top:3px}

@@ -2,10 +2,11 @@
 /* ---------- Việc chưa xong từ hôm qua: dời hạn hoặc giữ nguyên ---------- */
 let roItems=[];
 function pendingRollover(){
- const today=vnToday(),out=[];
+ const today=vnToday(),out=[],linked=typeof linkedKeys==='function'?linkedKeys():new Set();
  db.boards.forEach(b=>b.tasks.forEach(t=>{
   if(isDone(b,t)||!t.due||t.due.slice(0,10)>=today||t.keepDue===t.due)return;
   if(b.type==='team'&&t.assignee!==user.email)return;
+  if(b.type==='team'&&linked.has(b.id+':'+t.id))return;   // đã có thẻ cá nhân: xử lý ở thẻ cá nhân
   out.push({b,t,res:null});
  }));
  return out.sort((x,y)=>dueTs(x.t.due)-dueTs(y.t.due));
