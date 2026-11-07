@@ -52,5 +52,25 @@ Hàm cho web gọi: `find_member_by_no`, `send_invitation`, `respond_invitation`
 - Người dùng có thể tắt chia sẻ trong **Cài đặt → Lịch họp nhóm**.
 - Việc chỉ có hạn (chưa có thời lượng) không tính là trùng, chỉ nhắc nhẹ nếu hạn nằm trong giờ họp.
 
+## Họp trực tuyến ngay trong web (JaaS)
+Nút **📹 Vào họp** (trong cuộc họp, danh sách cuộc họp và thẻ họp ở bảng cá nhân) mở khung họp có cam, mic, chia sẻ màn hình và chat ngay trong trang. Web nhúng **JaaS** (Jitsi as a Service của 8x8) bằng Jitsi IFrame API. JaaS bắt buộc mỗi người vào phòng phải có một "vé" (JWT) ký bằng khóa riêng, nên khóa này đặt ở một Edge Function (`functions/jaas-token`), không bao giờ nằm trong code web.
+
+Cách bật (làm một lần):
+1. Đăng ký tài khoản JaaS (trang `jaas.8x8.vc`), lấy **AppID** (dạng `vpaas-magic-cookie-...`). Điều kiện miễn phí hiện hành xem ngay trên trang đăng ký (thời điểm viết: miễn phí cho tối đa 25 người dùng hoạt động).
+2. Trong JaaS console, mục **API Keys**, tạo cặp khóa, tải **khóa riêng** về và ghi lại **Key ID**. Đặt `KID` = `AppID/KeyID` (ví dụ `vpaas-magic-cookie-abc.../4f4910`).
+3. Khóa riêng phải ở dạng PKCS#8 (dòng đầu là `-----BEGIN PRIVATE KEY-----`). Nếu dòng đầu là `-----BEGIN RSA PRIVATE KEY-----` thì đổi bằng: `openssl pkcs8 -topk8 -nocrypt -in khoa.pk -out khoa8.pem`.
+4. Cài Supabase CLI, đăng nhập và liên kết dự án (`supabase login`, `supabase link --project-ref <mã dự án>`), rồi chạy:
+   ```
+   supabase secrets set JAAS_KID="vpaas-magic-cookie-.../4f4910"
+   supabase secrets set JAAS_PRIVATE_KEY="$(cat khoa8.pem)"
+   supabase functions deploy jaas-token
+   ```
+   (Cách khác không cần CLI: Dashboard, mục Edge Functions, tạo hàm `jaas-token` bằng trình soạn thảo, dán nội dung `functions/jaas-token/index.ts`, rồi thêm hai secret ở trang Secrets. `SUPABASE_URL` và `SUPABASE_ANON_KEY` được Supabase tự cấp cho hàm.)
+5. Tải lại web, mở một cuộc họp có giờ trong vòng 15 phút tới, bấm **Vào họp**.
+
+Quy tắc hàm cấp vé: chỉ cấp cho thành viên đã đăng nhập của bảng nhóm, có tên trong danh sách tham gia, trong khung từ 15 phút trước giờ bắt đầu đến 2 giờ sau giờ kết thúc, và vé chỉ dùng được cho đúng phòng của cuộc họp đó. Người tạo cuộc họp và chủ bảng là điều hành viên. Ghi hình và phát trực tiếp bị tắt.
+
+Lưu ý: hình và tiếng đi qua máy chủ của 8x8 (JaaS), không đi qua Supabase. Cần mạng truy cập được `8x8.vc`; trình chặn quảng cáo hoặc mạng trường có thể chặn. Chế độ chạy cục bộ (không đăng nhập Supabase) không họp trực tuyến được.
+
 ## Đã kiểm thử
 Thư mục `tests/` có bài kiểm thử chạy trên PostgreSQL thường (có giả lập phần xác thực và kho file của Supabase): 23 kiểm tra về mã số thành viên, phân quyền, lời mời, giới hạn tra cứu, file đính kèm và 11 kiểm tra về khung giờ bận (`meetings_test.sql`: ai đọc được gì, không sửa hộ người khác, không lộ sang nhóm khác). Ngoài ra web đã được thử với hai và ba người dùng khác nhau trên một máy chủ giả dùng chính PostgREST và các quy tắc này (đăng ký, mời bằng mã số, chấp nhận, đồng bộ, gộp khi sửa cùng lúc, file đính kèm, gỡ thành viên, chuyển dữ liệu cũ lên). Đây là kiểm thử cục bộ, **chưa chạy trên Supabase thật** (đặc biệt phần Realtime), nên nếu có lỗi hãy gửi nguyên văn thông báo lỗi và mô tả bước làm.

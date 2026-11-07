@@ -33,6 +33,7 @@ const LocalStore=(()=>{
   async load(user){try{return JSON.parse(localStorage.getItem(dataKey(user.email))||'null')}catch(e){return null}},
   save(user,data){localStorage.setItem(dataKey(user.email),JSON.stringify(data))},
   files,
+  async meetToken(){throw new Error('Họp trực tuyến cần bản đăng nhập Supabase, chế độ chạy cục bộ không có')},
   busy:{   // khung giờ bận: ở chế độ cục bộ chỉ có dữ liệu của các tài khoản trên cùng trình duyệt
    async push(slots){const e=localStorage.getItem(KEY_SESSION);if(e)localStorage.setItem('kanban_busy_'+e,JSON.stringify({slots,updated_at:new Date().toISOString()}))},
    async board(boardId,memberIds){const o={};(memberIds||[]).forEach(id=>{try{const r=JSON.parse(localStorage.getItem('kanban_busy_'+id)||'null');if(r)o[id]=r}catch(e){}});return o}

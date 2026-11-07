@@ -737,3 +737,16 @@ html[data-theme=dark] .ev-chip.mt .ev-time{color:#a99fff}
 .mt-sug-label{font-size:11px;color:var(--muted)}
 .mt-chip{border:1px solid var(--purple);background:transparent;color:var(--purple);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .mt-chip:hover{background:var(--purple);color:#fff}
+
+/* ---- Họp trực tuyến ---- */
+.mt-join{display:inline-block;margin-left:8px;background:var(--purple);color:#fff;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.ev-chip .mt-join{margin:6px 0 0;align-self:flex-start}
+.mt-row .mt-join{align-self:center;margin-left:auto}
+.mt-join-box{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.call-overlay{position:fixed;inset:0;z-index:3000;display:flex;flex-direction:column;background:#0d0f1a}
+.call-overlay[hidden]{display:none}
+.call-bar{display:flex;gap:12px;align-items:center;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));color:#fff;background:#151833;font-size:13px}
+.call-bar b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.call-bar span{color:#a9a6d6;font-size:12px}
+.call-host{flex:1;min-height:0;position:relative}
+.call-host iframe{position:absolute;inset:0;width:100%;height:100%;border:0}

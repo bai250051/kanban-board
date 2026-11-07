@@ -226,6 +226,16 @@ const SupabaseStore=(()=>{
   async push(slots){must(await sb.from('busy_slots').upsert({user_id:me.id,slots,updated_at:new Date().toISOString()},{onConflict:'user_id'}))},
   async board(boardId){const r=await sb.rpc('board_busy',{p_board:boardId});if(r.error)throw r.error;const o={};(r.data||[]).forEach(x=>{o[x.user_id]={slots:x.slots||[],updated_at:x.updated_at}});return o}
  };
+ /* ----- họp trực tuyến: xin "vé vào phòng" JaaS từ Edge Function jaas-token (khóa ký nằm ở máy chủ) ----- */
+ async function meetToken(boardId,meetingId){
+  const r=await sb.functions.invoke('jaas-token',{body:{boardId,meetingId}});
+  if(r.error){
+   let msg='Không xin được quyền vào họp. Kiểm tra mạng rồi thử lại.';
+   try{const res=r.error.context;if(res){const j=await res.json();msg=j.error||j.message||msg;if(res.status===404&&!j.error)msg='Chưa triển khai hàm jaas-token trên Supabase (xem supabase/README.md)'}}catch(e){}
+   throw new Error(msg);
+  }
+  return r.data;
+ }
  async function removeMember(boardId,userId){must(await sb.from('board_members').delete().eq('board_id',boardId).eq('user_id',userId));await refresh()}
 
  return{
@@ -247,7 +257,7 @@ const SupabaseStore=(()=>{
   async logout(){unsubscribe();known.clear();lastRootJson='';me=null;await sb.auth.signOut()},
   load,save,files,
   async fileIdsInUse(){return null},
-  invites,busy,removeMember,subscribe,unsubscribe,refresh,
+  invites,busy,meetToken,removeMember,subscribe,unsubscribe,refresh,
   idle(){return saving?saving.catch(()=>{}):Promise.resolve()},
   set onRemote(f){SupabaseStore_onRemote=f},
   _merge3:merge3

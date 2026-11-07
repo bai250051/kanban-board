@@ -120,11 +120,11 @@ function renderMeetingList(){
  const up=all.filter(m=>dueTs(mtEnd(m))>=now),past=all.filter(m=>dueTs(mtEnd(m))<now).reverse();
  const row=m=>{
   const by=memberOf(b,m.by),mine=(m.att||[]).includes(user.email);
-  return'<button type="button" class="mt-row" data-id="'+esc(m.id)+'"><div class="mt-when"><b>'+esc(mtDayLabel(m.start))+'</b><span>'+esc(mtRange(m))+'</span></div><div class="mt-main"><div class="mt-title">'+esc(m.title)+'</div><div class="mt-meta">'+(m.place?'📍 '+esc(m.place)+' · ':'')+'👥 '+(m.att||[]).length+' người'+(by?' · tạo bởi '+esc(by.id===user.email?'bạn':by.name):'')+(mine?'':' · bạn không trong danh sách')+'</div></div></button>';
+  return'<button type="button" class="mt-row" data-id="'+esc(m.id)+'"><div class="mt-when"><b>'+esc(mtDayLabel(m.start))+'</b><span>'+esc(mtRange(m))+'</span></div><div class="mt-main"><div class="mt-title">'+esc(m.title)+'</div><div class="mt-meta">'+(m.place?'📍 '+esc(m.place)+' · ':'')+'👥 '+(m.att||[]).length+' người'+(by?' · tạo bởi '+esc(by.id===user.email?'bạn':by.name):'')+(mine?'':' · bạn không trong danh sách')+'</div></div>'+(mine&&mtJoinState(m)==='ok'?'<span class="mt-join">📹 Vào họp</span>':'')+'</button>';
  };
  box.innerHTML=(up.length?up.map(row).join(''):'<div class="notification-empty">Chưa có cuộc họp sắp tới. Bấm “Tạo cuộc họp” để đặt lịch, web sẽ báo ai đang trùng lịch.</div>')
   +(past.length?'<details class="mt-past"><summary>Đã qua · '+past.length+'</summary>'+past.map(row).join('')+'</details>':'');
- box.querySelectorAll('.mt-row').forEach(el=>el.onclick=()=>{const m=b.meetings.find(x=>x.id===el.dataset.id);if(m){closeModals();openMeetingForm(b,m)}});
+ box.querySelectorAll('.mt-row').forEach(el=>el.onclick=e=>{const m=b.meetings.find(x=>x.id===el.dataset.id);if(!m)return;closeModals();if(e.target.closest('.mt-join'))joinMeeting(b,m);else openMeetingForm(b,m)});
 }
 $('meetingsBtn').onclick=openMeetings;
 $('mtNewBtn').onclick=()=>{const b=mtListBoard||board();closeModals();openMeetingForm(b,null)};
@@ -148,6 +148,7 @@ function openMeetingForm(b,m){
  $('mtForm').querySelectorAll('input,select,textarea,button.mt-edit-only').forEach(el=>{el.disabled=mtRO});
  $('mtDelete').hidden=!m||mtRO;$('mtSave').hidden=mtRO;$('mtSuggestBtn').hidden=mtRO;$('mtAttAll').hidden=mtRO;$('mtSuggest').innerHTML='';
  $('mtRoNote').hidden=!mtRO;
+ mtUpdateJoinRow(m);
  openModal('meetingModal');mtRecheck(true);
 }
 function mtRecheck(force){clearTimeout(mtTimer);mtTimer=setTimeout(()=>mtDoCheck(force),force?0:250)}
@@ -197,8 +198,8 @@ $('mtDelete').onclick=()=>{
 function makeMeetingChip(b,m){
  const now=Date.now(),s=dueTs(m.start),e=dueTs(mtEnd(m));let st='';if(now>=e)st='past';else if(now>=s)st='live';
  const el=document.createElement('button');el.type='button';el.className='ev-chip mt '+st;
- el.innerHTML='<span class="ev-time">'+esc(mtRange(m))+(st==='live'?'<b class="ev-live">Đang diễn ra</b>':'')+'</span><span class="ev-title">🤝 '+esc(m.title)+'</span>'+(m.place?'<span class="ev-place">📍 '+esc(m.place)+'</span>':'')+'<span class="ev-place">Nhóm: '+esc(b.name)+'</span>';
- el.title='Cuộc họp nhóm “'+b.name+'”';el.onclick=()=>openMeetingForm(b,m);
+ el.innerHTML='<span class="ev-time">'+esc(mtRange(m))+(st==='live'?'<b class="ev-live">Đang diễn ra</b>':'')+'</span><span class="ev-title">🤝 '+esc(m.title)+'</span>'+(m.place?'<span class="ev-place">📍 '+esc(m.place)+'</span>':'')+'<span class="ev-place">Nhóm: '+esc(b.name)+'</span>'+(mtJoinState(m)==='ok'?'<span class="mt-join">📹 Vào họp</span>':'');
+ el.title='Cuộc họp nhóm “'+b.name+'”';el.onclick=e=>{if(e.target.closest('.mt-join')){e.stopPropagation();joinMeeting(b,m)}else openMeetingForm(b,m)};
  return el;
 }
 function meetingChips(cell,day){meetingsForMe().filter(x=>x.m.start.slice(0,10)===day).forEach(x=>cell.appendChild(makeMeetingChip(x.b,x.m)))}
@@ -225,3 +226,59 @@ $('shareBusyChk').onchange=e=>{
  db.shareBusy=e.target.checked;save();busyLast=null;busyRetryAt=0;scheduleBusyPush();
  showToast(db.shareBusy?'Đã bật chia sẻ khung giờ bận với nhóm':'Đã tắt. Thành viên sẽ không thấy lịch bận của bạn khi đặt họp');
 };
+
+/* ---------- Họp trực tuyến ngay trong web (JaaS, nhúng bằng Jitsi IFrame API) ---------- */
+const MT_JOIN_BEFORE=15,MT_JOIN_AFTER=120;          // phút: mở trước giờ họp / còn vào được sau khi kết thúc (khớp với hàm jaas-token)
+function mtJoinState(m){
+ const s=dueTs(m.start),e=dueTs(mtEnd(m)),n=Date.now();
+ if(n<s-MT_JOIN_BEFORE*60000)return'early';
+ if(n>e+MT_JOIN_AFTER*60000)return'over';
+ return'ok';
+}
+function mtUpdateJoinRow(m){
+ const row=$('mtJoinRow'),show=!!m&&(m.att||[]).includes(user.email);
+ row.hidden=!show;if(!show)return;
+ const st=mtJoinState(m),btn=$('mtJoin');
+ btn.disabled=st!=='ok';
+ btn.textContent=st==='ok'?'📹 Vào họp':st==='early'?'📹 Vào họp (mở lúc '+hmOf(dtLocal(vnWall(new Date(dueTs(m.start)-MT_JOIN_BEFORE*60000))))+')':'Cuộc họp đã kết thúc';
+}
+$('mtJoin').onclick=()=>{const b=mtBoard,m=b&&b.meetings.find(x=>x.id===mtEditId);if(!m)return;closeModals();joinMeeting(b,m)};
+
+let jitsiApi=null,jitsiScriptApp='';
+function loadJitsiScript(appId){
+ return new Promise((res,rej)=>{
+  if(window.JitsiMeetExternalAPI&&(!jitsiScriptApp||jitsiScriptApp===appId))return res();
+  const s=document.createElement('script');s.src='https://8x8.vc/'+encodeURIComponent(appId)+'/external_api.js';s.async=true;
+  s.onload=()=>{jitsiScriptApp=appId;res()};
+  s.onerror=()=>rej(new Error('Không tải được thư viện họp từ 8x8.vc. Kiểm tra mạng hoặc tắt trình chặn quảng cáo cho trang này.'));
+  document.head.appendChild(s);
+ });
+}
+function leaveCall(){
+ if(jitsiApi){try{jitsiApi.dispose()}catch(e){}jitsiApi=null}
+ $('callHost').innerHTML='';$('callOverlay').hidden=true;
+}
+async function joinMeeting(b,m){
+ if(!(m.att||[]).includes(user.email)){showToast('Bạn không có trong danh sách tham gia cuộc họp này');return}
+ if(jitsiApi){showToast('Bạn đang ở trong một cuộc họp, hãy rời họp trước');return}
+ const st=mtJoinState(m);
+ if(st==='early'){showToast('Chưa đến giờ vào họp. Mở từ '+MT_JOIN_BEFORE+' phút trước giờ bắt đầu');return}
+ if(st==='over'){showToast('Cuộc họp đã kết thúc');return}
+ $('callTitle').textContent='🤝 '+m.title;$('callStatus').textContent='Đang kết nối…';$('callOverlay').hidden=false;
+ try{
+  const t=await Store.meetToken(b.id,m.id);
+  await loadJitsiScript(t.appId);
+  if($('callOverlay').hidden)return;                 // người dùng đã bấm Rời họp trong lúc đang kết nối
+  const host=$('callHost');host.innerHTML='';
+  jitsiApi=new window.JitsiMeetExternalAPI(t.domain||'8x8.vc',{
+   roomName:t.room,jwt:t.jwt,parentNode:host,width:'100%',height:'100%',lang:'vi',
+   configOverwrite:{prejoinConfig:{enabled:true},disableDeepLinking:true},
+   userInfo:{displayName:t.name}
+  });
+  jitsiApi.addListener('readyToClose',leaveCall);
+  jitsiApi.addListener('videoConferenceLeft',leaveCall);
+  $('callStatus').textContent='';
+ }catch(e){leaveCall();showToast((e&&e.message)||'Không vào được cuộc họp')}
+}
+$('callLeave').onclick=leaveCall;
+
