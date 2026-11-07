@@ -27,6 +27,7 @@ function buildICS(){
    Object.entries(ev.overrides||{}).forEach(([day,o])=>{if(day<ev.from||day>ev.to||(ev.skip||[]).includes(day))return;L.push('BEGIN:VEVENT','UID:event-'+ev.id+'-'+day+'@kanban','DTSTAMP:'+stamp,'DTSTART:'+icsDT(day+'T'+o.start),'DTEND:'+icsDT(day+'T'+o.end),'SUMMARY:'+icsEsc(ev.title),...((o.place||ev.place)?['LOCATION:'+icsEsc(o.place||ev.place)]:[]),...alarm(rm,'Sắp bắt đầu: '+ev.title),'END:VEVENT');n++});
   });
  });
+ (typeof meetingsForMe==='function'?meetingsForMe():[]).forEach(({b,m})=>{L.push('BEGIN:VEVENT','UID:meeting-'+m.id+'@kanban','DTSTAMP:'+stamp,'DTSTART;TZID='+ICS_TZ+':'+icsDT(m.start),'DTEND;TZID='+ICS_TZ+':'+icsDT(mtEnd(m)),'SUMMARY:'+icsEsc('🤝 Họp: '+m.title),...(m.place?['LOCATION:'+icsEsc(m.place)]:[]),'DESCRIPTION:'+icsEsc('Nhóm '+b.name+(m.note?' — '+m.note:'')),...alarm(30,'Sắp họp: '+m.title),'END:VEVENT');n++});
  L.push('END:VCALENDAR');return{text:L.map(icsLine).join('\r\n')+'\r\n',count:n};
 }
 $('exportIcs').onclick=()=>{
@@ -44,7 +45,7 @@ function applyTheme(t,anim){
  document.querySelectorAll('[data-theme-choice]').forEach(el=>{const on=el.dataset.themeChoice===t;el.classList.toggle('active',on);el.setAttribute('aria-pressed',on?'true':'false')});
 }
 document.querySelectorAll('[data-theme-choice]').forEach(el=>el.onclick=()=>{applyTheme(el.dataset.themeChoice,true);showToast(el.dataset.themeChoice==='dark'?'Đã chuyển sang giao diện tối':'Đã chuyển sang giao diện sáng')});
-const openSettings=()=>{$('sidebar').classList.remove('open');if(typeof refreshAutoLinkUI==='function')refreshAutoLinkUI();openModal('settingsModal');updateStorageInfo()};
+const openSettings=()=>{$('sidebar').classList.remove('open');if(typeof refreshAutoLinkUI==='function')refreshAutoLinkUI();if(typeof refreshShareBusyUI==='function')refreshShareBusyUI();openModal('settingsModal');updateStorageInfo()};
 $('settingsBtn').onclick=openSettings;$('sideSettings').onclick=openSettings;
 applyTheme(getTheme(),false);
 ['evStart','evEnd','evOneStart','evOneEnd'].forEach(id=>tpInit($(id),$(id+'Tp')));dueInit();

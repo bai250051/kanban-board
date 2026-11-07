@@ -13,6 +13,7 @@ function deadlineItems(){
  }));
  const today0=parseDay(vnToday());
  db.boards.forEach(b=>{if(b.type!=='personal')return;(b.events||[]).forEach(ev0=>{[0,1].forEach(k=>{const day=ymd(addDay(today0,k));if(!eventOccursOn(ev0,day))return;const ev=occ(ev0,day),ts=dueTs(day+'T'+ev.start);if(ts<now)return;const rm=(ev.remind==null?15:ev.remind)*60000;let state=null;if(rm&&ts-now<=rm)state='soon';else if(ts-now<=24*3600000)state='up';if(state)out.push({key:b.id+':e'+ev.id+':'+day+':'+state,state,ev,day,b,ts,t:{id:ev.id,title:ev.title,due:day+'T'+ev.start,remind:ev.remind}})})})});
+ if(typeof meetingReminderItems==='function')out.push(...meetingReminderItems());
  return out.sort((a,b)=>a.ts-b.ts);
 }
 function mentionItems(){
@@ -32,7 +33,7 @@ function renderNotifications(){
  groups.forEach(([st,label,cls])=>{
   const list=items.filter(i=>i.state===st);if(!list.length)return;
   html+='<div class="notif-group">'+label+' · '+list.length+'</div>'+list.map(i=>{
-   const c=countdown(i.t.due),acked=!!(db.ack||{})[i.key],attrs=' data-key="'+esc(i.key)+'" data-b="'+esc(i.b.id)+'" data-t="'+esc(i.t.id)+'"'+(i.ev?' data-ev="'+esc(i.day)+'"':'');
+   const c=countdown(i.t.due),acked=!!(db.ack||{})[i.key],attrs=' data-key="'+esc(i.key)+'" data-b="'+esc(i.b.id)+'" data-t="'+esc(i.t.id)+'"'+(i.ev?' data-ev="'+esc(i.day)+'"':'')+(i.mt?' data-mt="1"':'');
    const unreadCls=(i.state!=='up'&&!db.seen[i.key]&&!acked?' unread':'');
    const body='<strong>'+esc(c.text)+'</strong><span class="n-title">'+(i.ev?'🗓 ':'')+esc(i.t.title)+'</span><span>'+esc(i.b.name)+' · '+(i.ev?'Bắt đầu ':'Hạn ')+fmtDue(i.t.due)+'</span>';
    if(i.state==='late'&&!i.ev)return '<div class="notification-item has-actions '+cls+unreadCls+'"'+attrs+'><button type="button" class="ni-main">'+body+'</button>'+(acked?'<div class="ni-ack">✗ Đã xác nhận: chưa hoàn thành, thẻ giữ nguyên</div>':'<div class="ni-actions"><button type="button" class="ni-done" data-act="done">✓ Đã hoàn thành</button><button type="button" class="ni-no" data-act="no">✗ Chưa hoàn thành</button></div>')+'</div>';
@@ -41,7 +42,7 @@ function renderNotifications(){
  });
  $('notificationList').innerHTML=html||'<div class="notification-empty">Không có thông báo nào. 🎉</div>';
  $('notificationList').querySelectorAll('[data-ro]').forEach(el=>el.onclick=()=>{$('notificationPanel').classList.remove('open');openRollover()});
- const openFrom=el=>{viewMode='board';db.seen[el.dataset.key]=1;$('notificationPanel').classList.remove('open');db.current=el.dataset.b;render();if(el.dataset.ev)openEvent(el.dataset.t,el.dataset.ev);else openTask(el.dataset.t)};
+ const openFrom=el=>{viewMode='board';db.seen[el.dataset.key]=1;$('notificationPanel').classList.remove('open');db.current=el.dataset.b;render();if(el.dataset.mt){const mb=db.boards.find(x=>x.id===el.dataset.b),mm=mb&&(mb.meetings||[]).find(x=>x.id===el.dataset.t);if(mm)openMeetingForm(mb,mm)}else if(el.dataset.ev)openEvent(el.dataset.t,el.dataset.ev);else openTask(el.dataset.t)};
  $('notificationList').querySelectorAll('.notification-item:not(.has-actions):not([data-ro])').forEach(el=>el.onclick=()=>openFrom(el));
  $('notificationList').querySelectorAll('.notification-item.has-actions').forEach(el=>{
   el.querySelector('.ni-main').onclick=()=>openFrom(el);

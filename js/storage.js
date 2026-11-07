@@ -43,7 +43,7 @@ function cols(b){if(!Array.isArray(b.columns)||b.columns.length<2)b.columns=defa
 const colOf=(b,id)=>cols(b).find(c=>c.id===id);
 const isDone=(b,t)=>{const c=colOf(b,t.status);return !!(c&&c.done)};
 function setStatus(b,t,status){const was=isDone(b,t);t.status=status;const now=isDone(b,t);if(now&&!was)t.doneAt=new Date().toISOString();if(!now)delete t.doneAt}
-function normalizeBoard(b){cols(b);b.tasks=b.tasks||[];b.events=b.events||[];b.sprints=b.sprints||[];b.view=b.view||'columns';b.sprintSel=b.sprintSel||'all';b.collapsed=b.collapsed||{};const sids=b.sprints.map(x=>x.id);const ids=b.columns.map(c=>c.id);b.tasks.forEach(t=>{if(!ids.includes(t.status))t.status=ids[0];t.comments=t.comments||[];t.sprint=sids.includes(t.sprint)?t.sprint:'';t.attachments=t.attachments||[];t.checklist=t.checklist||[]})}
+function normalizeBoard(b){cols(b);b.tasks=b.tasks||[];b.events=b.events||[];b.meetings=b.meetings||[];b.sprints=b.sprints||[];b.view=b.view||'columns';b.sprintSel=b.sprintSel||'all';b.collapsed=b.collapsed||{};const sids=b.sprints.map(x=>x.id);const ids=b.columns.map(c=>c.id);b.tasks.forEach(t=>{if(!ids.includes(t.status))t.status=ids[0];t.comments=t.comments||[];t.sprint=sids.includes(t.sprint)?t.sprint:'';t.attachments=t.attachments||[];t.checklist=t.checklist||[]})}
 const board=()=>db.boards.find(b=>b.id===db.current)||db.boards[0];
 const memberOf=(b,id)=>b.members.find(m=>m.id===id);
 

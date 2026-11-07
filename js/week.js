@@ -53,7 +53,7 @@ function renderWeek(b){
  wrap.innerHTML=h+'</div></div>';
  wrap.querySelector('.week-grid').style.gridTemplateColumns='72px '+days.map(d=>ymd(d)===today?'minmax(250px,2.2fr)':'minmax(104px,1fr)').join(' ');
  wrap.querySelectorAll('.wk-day').forEach(btn=>btn.onclick=()=>openZoom(btn.dataset.day));
- wrap.querySelectorAll('.wk-cell.events').forEach(cell=>{occurrencesOn(b,cell.dataset.day).forEach(ev=>cell.appendChild(makeEventChip(ev,cell.dataset.day)))});
+ wrap.querySelectorAll('.wk-cell.events').forEach(cell=>{occurrencesOn(b,cell.dataset.day).forEach(ev=>cell.appendChild(makeEventChip(ev,cell.dataset.day)));if(typeof meetingChips==='function')meetingChips(cell,cell.dataset.day)});
  wrap.querySelectorAll('.wk-cell:not(.events)').forEach(cell=>{
   const day=cell.dataset.day,st=cell.dataset.status,add=cell.querySelector('.wk-add');
   if(day===today)cell.classList.add('today-col');
@@ -76,6 +76,7 @@ function renderZoom(b){
  wrap.appendChild(bar);
  const evs=occurrencesOn(b,zoomDay);
  if(evs.length){const sec=document.createElement('div');sec.className='zoom-events';sec.innerHTML='<div class="tray-title">Lịch cố định trong ngày · '+evs.length+'</div>';const lst=document.createElement('div');lst.className='ev-list';evs.forEach(ev=>lst.appendChild(makeEventChip(ev,zoomDay)));sec.appendChild(lst);wrap.appendChild(sec)}
+ if(typeof zoomMeetings==='function')zoomMeetings(wrap,zoomDay);
  const bd=document.createElement('div');bd.className='board zoom-board';
  setBoardCols(bd,cols(b).length);
  cols(b).forEach(c=>{const col=buildColumn(c,tasksOn(b,zoomDay,c.id),b);col.querySelector('.add-card').onclick=()=>openTask(null,c.id,zoomDay);attachDrop(col,zoomDay,c.id);bd.appendChild(col)});

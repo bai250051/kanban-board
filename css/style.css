@@ -714,3 +714,26 @@ html[data-theme=dark] .card-badges .lk-badge.lost{background:#3a2028;color:#ee8a
 .pull-row input{margin-top:3px;accent-color:var(--purple)}
 .pull-title{font-size:13px;font-weight:750}
 .pull-meta{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ---- Cuộc họp nhóm ---- */
+.ev-chip.mt{border-left-color:#6759e8;border-color:#d9d4fb;background:#f6f4ff}
+.ev-chip.mt .ev-time{color:#5746c9}
+html[data-theme=dark] .ev-chip.mt{background:#252347;border-color:#3a3670;border-left-color:#8b80ff}
+html[data-theme=dark] .ev-chip.mt .ev-time{color:#a99fff}
+.mt-row{display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:transparent;color:inherit;font:inherit;border:1px solid var(--line);border-radius:12px;padding:10px 13px;margin-bottom:8px;cursor:pointer}
+.mt-row:hover{border-color:var(--purple)}
+.mt-when{min-width:92px;display:flex;flex-direction:column;gap:2px;font-size:12px}
+.mt-when b{font-weight:800}.mt-when span{color:var(--muted);font-size:11px}
+.mt-title{font-size:13px;font-weight:750}.mt-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.mt-past{margin-top:12px}.mt-past summary{cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:8px}
+.mt-att-list{display:flex;flex-wrap:wrap;gap:8px}
+.mt-att{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+.mt-att input{accent-color:var(--purple)}
+.mt-check{border:1px solid var(--line);border-radius:12px;padding:10px 13px;font-size:12px;line-height:1.55;color:var(--muted)}
+.mt-check.ok{border-color:#1c9b72;background:rgba(28,155,114,.07)}
+.mt-check.warn{border-color:#e0a030;background:rgba(224,160,48,.09)}
+.mt-sum{font-weight:800;color:var(--ink);margin-bottom:4px}.mt-line{margin-top:3px}
+.mt-sug{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:8px}
+.mt-sug-label{font-size:11px;color:var(--muted)}
+.mt-chip{border:1px solid var(--purple);background:transparent;color:var(--purple);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.mt-chip:hover{background:var(--purple);color:#fff}

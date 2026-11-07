@@ -51,24 +51,28 @@ const SupabaseStore=(()=>{
  }
  /* Gộp ba bên: base (lần đồng bộ trước), mine (bản trên máy), theirs (bản máy chủ).
     Phần ai đổi thì lấy; cả hai cùng đổi thì ưu tiên bản máy chủ. Việc (thẻ) được gộp theo mã. */
- function merge3(base,mine,theirs){
-  const out={},keys=new Set([...Object.keys(mine),...Object.keys(theirs),...Object.keys(base||{})]);
-  for(const k of keys){
-   if(k==='tasks')continue;
-   const b=base?J(base[k]):undefined,m=J(mine[k]),t=J(theirs[k]);
-   const v=m===b?theirs[k]:(t===b?mine[k]:theirs[k]);
-   if(v!==undefined)out[k]=v;
-  }
-  const idx=a=>new Map((a||[]).map(x=>[x.id,x])),B=idx(base&&base.tasks),M=idx(mine.tasks),T=idx(theirs.tasks);
-  const pickTask=id=>{
+ function mergeList(baseArr,mineArr,theirsArr){
+  const idx=a=>new Map((a||[]).map(x=>[x.id,x])),B=idx(baseArr),M=idx(mineArr),T=idx(theirsArr);
+  const pickItem=id=>{
    const b=B.get(id),m=M.get(id),t=T.get(id),jb=b&&J(b);
    if(m&&t)return J(m)===jb?t:(J(t)===jb?m:t);
    if(m&&!t)return !b?m:(J(m)===jb?null:m);
    if(!m&&t)return !b?t:(J(t)===jb?null:t);
    return null;
   };
-  const order=[...(theirs.tasks||[]).map(x=>x.id),...(mine.tasks||[]).map(x=>x.id).filter(id=>!T.has(id))];
-  out.tasks=order.map(pickTask).filter(Boolean);
+  const order=[...(theirsArr||[]).map(x=>x.id),...(mineArr||[]).map(x=>x.id).filter(id=>!T.has(id))];
+  return order.map(pickItem).filter(Boolean);
+ }
+ function merge3(base,mine,theirs){
+  const out={},keys=new Set([...Object.keys(mine),...Object.keys(theirs),...Object.keys(base||{})]);
+  for(const k of keys){
+   if(k==='tasks'||k==='meetings')continue;
+   const b=base?J(base[k]):undefined,m=J(mine[k]),t=J(theirs[k]);
+   const v=m===b?theirs[k]:(t===b?mine[k]:theirs[k]);
+   if(v!==undefined)out[k]=v;
+  }
+  out.tasks=mergeList(base&&base.tasks,mine.tasks,theirs.tasks);
+  out.meetings=mergeList(base&&base.meetings,mine.meetings,theirs.meetings);   // cuộc họp gộp theo mã như thẻ việc
   return out;
  }
 
@@ -217,6 +221,11 @@ const SupabaseStore=(()=>{
   async mine(){const r=await sb.rpc('my_pending_invitations');return r.error?[]:(r.data||[])},
   async ofBoard(boardId){const r=await sb.rpc('board_pending_invitations',{p_board:boardId});return r.error?[]:(r.data||[])}
  };
+ /* ----- khung giờ bận (để kiểm tra trùng lịch họp; chỉ giờ, không kèm nội dung) ----- */
+ const busy={
+  async push(slots){must(await sb.from('busy_slots').upsert({user_id:me.id,slots,updated_at:new Date().toISOString()},{onConflict:'user_id'}))},
+  async board(boardId){const r=await sb.rpc('board_busy',{p_board:boardId});if(r.error)throw r.error;const o={};(r.data||[]).forEach(x=>{o[x.user_id]={slots:x.slots||[],updated_at:x.updated_at}});return o}
+ };
  async function removeMember(boardId,userId){must(await sb.from('board_members').delete().eq('board_id',boardId).eq('user_id',userId));await refresh()}
 
  return{
@@ -238,7 +247,7 @@ const SupabaseStore=(()=>{
   async logout(){unsubscribe();known.clear();lastRootJson='';me=null;await sb.auth.signOut()},
   load,save,files,
   async fileIdsInUse(){return null},
-  invites,removeMember,subscribe,unsubscribe,refresh,
+  invites,busy,removeMember,subscribe,unsubscribe,refresh,
   idle(){return saving?saving.catch(()=>{}):Promise.resolve()},
   set onRemote(f){SupabaseStore_onRemote=f},
   _merge3:merge3

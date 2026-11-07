@@ -20,7 +20,7 @@ $('deleteBoardBtn').onclick=()=>{
 const toB64=s=>{const by=new TextEncoder().encode(s);let bin='';by.forEach(x=>bin+=String.fromCharCode(x));return btoa(bin)};
 const fromB64=s=>{const bin=atob(s);return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0)))};
 function makeInviteLink(b){
- const snap={id:b.id,name:b.name,desc:b.desc,owner:b.owner,ownerName:user.name,members:b.members,columns:cols(b),sprints:b.sprints,tasks:b.tasks.map(t=>({...t,attachments:(t.attachments||[]).map(a=>(a.data||a.idb)?{id:a.id,name:a.name,size:a.size,type:a.type,missing:true}:a)}))};
+ const snap={id:b.id,name:b.name,desc:b.desc,owner:b.owner,ownerName:user.name,members:b.members,columns:cols(b),sprints:b.sprints,meetings:b.meetings||[],tasks:b.tasks.map(t=>({...t,attachments:(t.attachments||[]).map(a=>(a.data||a.idb)?{id:a.id,name:a.name,size:a.size,type:a.type,missing:true}:a)}))};
  const enc=toB64(JSON.stringify(snap)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
  return location.href.split('#')[0]+'#join='+enc;
 }
@@ -44,7 +44,7 @@ function openJoin(snap){
   if(!ex){
    const members=snap.members.map(m=>({...m}));
    if(!members.some(m=>m.id===user.email))members.push({id:user.email,name:user.name,email:user.email,color:COLORS[members.length%4]});
-   const nb={id:snap.id,name:snap.name,desc:snap.desc||'',type:'team',owner:snap.owner||'',members,columns:snap.columns,sprints:snap.sprints||[],tasks:snap.tasks||[],events:[]};normalizeBoard(nb);db.boards.push(nb);
+   const nb={id:snap.id,name:snap.name,desc:snap.desc||'',type:'team',owner:snap.owner||'',members,columns:snap.columns,sprints:snap.sprints||[],meetings:snap.meetings||[],tasks:snap.tasks||[],events:[]};normalizeBoard(nb);db.boards.push(nb);
   }
   db.current=snap.id;pendingJoin=null;history.replaceState(null,'',location.pathname+location.search);closeModals();render();showToast(ex?'Đã mở bảng nhóm':'Bạn đã tham gia nhóm “'+snap.name+'”');
  };

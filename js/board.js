@@ -94,7 +94,7 @@ function renderStats(b){
  $('doneNote').textContent=(n?Math.round(done/n*100):0)+'% tổng công việc';
  $('dueStat').textContent=b.tasks.filter(t=>{if(isDone(b,t)||!t.due)return false;const d=dueTs(t.due)-now;return d>=0&&d<=3*86400000}).length;
 }
-function render(){if(typeof syncLinks==='function')syncLinks();const b=board();renderSidebar();applyView();renderHeader(b);renderBoard(b);renderStats(b);renderNotifications();save()}
+function render(){if(typeof syncLinks==='function')syncLinks();if(typeof scheduleBusyPush==='function')scheduleBusyPush();const b=board();renderSidebar();applyView();renderHeader(b);renderBoard(b);renderStats(b);renderNotifications();save()}
 function moveTask(id,status,beforeId){
  const b=board(),t=b.tasks.find(x=>x.id===id);if(!t||beforeId===id)return;
  const changed=t.status!==status;pushUndo();
