@@ -22,13 +22,14 @@ function mentionItems(){
 }
 function renderNotifications(){
  if(!user)return;
- const items=deadlineItems(),ments=mentionItems(),unread=items.filter(i=>i.state!=='up'&&!db.seen[i.key]&&!(db.ack||{})[i.key]).length+ments.filter(i=>!db.seen[i.key]).length+(typeof pendingInvites!=='undefined'?pendingInvites.length:0);
+ const items=deadlineItems(),ments=mentionItems(),unread=items.filter(i=>i.state!=='up'&&!db.seen[i.key]&&!(db.ack||{})[i.key]).length+ments.filter(i=>!db.seen[i.key]).length+(typeof pendingInvites!=='undefined'?pendingInvites.length:0)+(typeof meetingNotices==='function'?meetingNotices().filter(n=>!db.seen[n.key]).length:0);
  const badge=$('notifyCount');badge.hidden=!unread;badge.textContent=unread>9?'9+':unread;
  document.title=(unread?'('+unread+') ':'')+'Kanban Board';
  const groups=[['late','QUÁ HẠN','n-late'],['soon','SẮP ĐẾN HẠN / SẮP DIỄN RA','n-soon'],['up','SẮP TỚI','n-up']];
  let html='';
  const pendRo=pendingRollover().length;
  if(pendRo)html+='<button type="button" class="notification-item rollover-link" data-ro="1">↻ Có '+pendRo+' việc chưa xong từ trước hôm nay · dời hạn hoặc giữ nguyên</button>';
+ if(typeof meetingNoticeHtml==='function')html+=meetingNoticeHtml();
  if(ments.length)html+='<div class="notif-group">NHẮC TÊN · '+ments.length+'</div>'+ments.map(i=>'<button class="notification-item notif-mention'+(!db.seen[i.key]?' unread':'')+'" data-key="'+esc(i.key)+'" data-b="'+esc(i.b.id)+'" data-t="'+esc(i.t.id)+'"><strong>'+esc(i.c.authorName)+' đã nhắc bạn · '+timeAgo(i.c.ts)+'</strong><span class="n-title">'+esc(i.t.title)+'</span><span>'+esc(i.b.name)+' · “'+esc(i.c.text.length>70?i.c.text.slice(0,70)+'…':i.c.text)+'”</span></button>').join('');
  groups.forEach(([st,label,cls])=>{
   const list=items.filter(i=>i.state===st);if(!list.length)return;

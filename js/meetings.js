@@ -34,7 +34,7 @@ function busySlotsNow(){
    out.push({s:d,e:d,k:'d'});
   });
  });
- meetingsForMe().forEach(({m})=>{const dd=m.start.slice(0,10);if(dd>=today&&dd<=last)out.push({s:m.start,e:mtEnd(m),k:'m',r:m.id})});
+ activeMeetingsForMe().forEach(({m})=>{const dd=m.start.slice(0,10);if(dd>=today&&dd<=last)out.push({s:m.start,e:mtEnd(m),k:'m',r:m.id})});
  return out.sort((a,b)=>a.s.localeCompare(b.s)).slice(0,2500);
 }
 let busyTimer=null,busyLast=null,busyUser='',busyRetryAt=0;
@@ -60,19 +60,28 @@ async function mtFetchBusy(b,force){
 }
 
 /* ---------- Tìm trùng lịch (hàm thuần, dễ kiểm thử) ---------- */
+/* Số phút "sát giờ họp": việc đến hạn trong khoảng này ngay trước giờ bắt đầu cũng được cảnh báo (0 = tắt). Chỉnh trong Cài đặt. */
+const mtNear=()=>db&&db.mtNearMin!=null?+db.mtNearMin:60;
 function mtConflicts(b,start,dur,att,ignoreId,map,mySlots){
- const end=mtEndOf(start,dur),day=start.slice(0,10);
+ const end=mtEndOf(start,dur),day=start.slice(0,10),sTs=dueTs(start),near=mtNear();
  const inBoard=new Set((b.meetings||[]).map(x=>x.id));
- return att.map(id=>{
+ const cur=(b.meetings||[]).find(x=>x.id===ignoreId);
+ return att.filter(id=>!(cur&&(cur.rsvp||{})[id]==='no')).map(id=>{
   const mem=memberOf(b,id)||{id,name:'Thành viên'},hard=[],soft=[];let sameDay=0;
   (b.meetings||[]).forEach(o=>{
-   if(o.id===ignoreId||!(o.att||[]).includes(id))return;
+   if(o.id===ignoreId||!(o.att||[]).includes(id)||(o.rsvp||{})[id]==='no')return;
    const oe=mtEnd(o);if(o.start<end&&start<oe)hard.push({k:'m',s:o.start,e:oe,t:o.title});
   });
   const row=id===user.email?null:map[id],slots=id===user.email?mySlots:(row?row.slots:[]);
   slots.forEach(x=>{
    if(x.k==='m'&&inBoard.has(x.r))return;           // cuộc họp của bảng này đã xét ở trên
-   if(x.k==='d'){if(x.s>=start&&x.s<=end)soft.push({k:'d',s:x.s});else if(x.s.slice(0,10)===day)sameDay++;return}
+   if(x.k==='d'){
+    const xt=dueTs(x.s);
+    if(x.s>=start&&x.s<=end)soft.push({k:'d',s:x.s,before:0});                                    // đến hạn ngay trong giờ họp
+    else if(near>0&&x.s<start&&sTs-xt<=near*60000)soft.push({k:'d',s:x.s,before:Math.round((sTs-xt)/60000)});   // đến hạn sát trước giờ họp
+    else if(x.s.slice(0,10)===day)sameDay++;
+    return;
+   }
    if(x.s<end&&start<x.e)hard.push({k:x.k,s:x.s,e:x.e});
   });
   const stale=row&&row.updated_at&&Date.now()-Date.parse(row.updated_at)>3*86400000;
@@ -98,7 +107,7 @@ function mtCheckHtml(res,info){
  res.forEach(x=>{
   const lines=[];
   x.hard.forEach(y=>lines.push('⚠ trùng '+MT_KIND[y.k]+' '+hmOf(y.s)+'–'+hmOf(y.e)+(y.t?' “'+esc(y.t)+'”':'')));
-  x.soft.forEach(y=>lines.push('● có việc đến hạn lúc '+hmOf(y.s)+' trong giờ họp'));
+  x.soft.forEach(y=>lines.push('● có việc đến hạn lúc '+hmOf(y.s)+(y.before?', sát giờ họp (trước '+y.before+' phút)':' trong giờ họp')));
   if(x.sameDay)lines.push('· '+x.sameDay+' việc đến hạn cùng ngày');
   if(x.noData&&!(info&&info.err))lines.push('· chưa có dữ liệu lịch (bạn ấy chưa mở web bản mới)');
   if(x.stale){const d=new Date(x.stale);lines.push('· lịch cập nhật lần cuối '+pad(d.getDate())+'/'+pad(d.getMonth()+1))}
@@ -120,7 +129,7 @@ function renderMeetingList(){
  const up=all.filter(m=>dueTs(mtEnd(m))>=now),past=all.filter(m=>dueTs(mtEnd(m))<now).reverse();
  const row=m=>{
   const by=memberOf(b,m.by),mine=(m.att||[]).includes(user.email);
-  return'<button type="button" class="mt-row" data-id="'+esc(m.id)+'"><div class="mt-when"><b>'+esc(mtDayLabel(m.start))+'</b><span>'+esc(mtRange(m))+'</span></div><div class="mt-main"><div class="mt-title">'+esc(m.title)+'</div><div class="mt-meta">'+(m.place?'📍 '+esc(m.place)+' · ':'')+'👥 '+(m.att||[]).length+' người'+(by?' · tạo bởi '+esc(by.id===user.email?'bạn':by.name):'')+(mine?'':' · bạn không trong danh sách')+'</div></div>'+(mine&&mtJoinState(m)==='ok'?'<span class="mt-join">📹 Vào họp</span>':'')+'</button>';
+  return'<button type="button" class="mt-row" data-id="'+esc(m.id)+'"><div class="mt-when"><b>'+esc(mtDayLabel(m.start))+'</b><span>'+esc(mtRange(m))+'</span></div><div class="mt-main"><div class="mt-title">'+esc(m.title)+'</div><div class="mt-meta">'+(m.place?'📍 '+esc(m.place)+' · ':'')+'👥 '+(m.att||[]).length+' người'+(by?' · tạo bởi '+esc(by.id===user.email?'bạn':by.name):'')+(mine?'':' · bạn không trong danh sách')+'</div><div class="mt-meta">'+mtRsvpText(m)+'</div></div>'+(mine&&mtJoinState(m)==='ok'?'<span class="mt-join">📹 Vào họp</span>':'')+'</button>';
  };
  box.innerHTML=(up.length?up.map(row).join(''):'<div class="notification-empty">Chưa có cuộc họp sắp tới. Bấm “Tạo cuộc họp” để đặt lịch, web sẽ báo ai đang trùng lịch.</div>')
   +(past.length?'<details class="mt-past"><summary>Đã qua · '+past.length+'</summary>'+past.map(row).join('')+'</details>':'');
@@ -148,7 +157,8 @@ function openMeetingForm(b,m){
  $('mtForm').querySelectorAll('input,select,textarea,button.mt-edit-only').forEach(el=>{el.disabled=mtRO});
  $('mtDelete').hidden=!m||mtRO;$('mtSave').hidden=mtRO;$('mtSuggestBtn').hidden=mtRO;$('mtAttAll').hidden=mtRO;$('mtSuggest').innerHTML='';
  $('mtRoNote').hidden=!mtRO;
- mtUpdateJoinRow(m);
+ mtUpdateJoinRow(m);mtUpdateRsvpRow(b,m);
+ if(m&&((m.att||[]).includes(user.email)||m.by===user.email)){mtAck(b,m);save();renderNotifications()}
  openModal('meetingModal');mtRecheck(true);
 }
 function mtRecheck(force){clearTimeout(mtTimer);mtTimer=setTimeout(()=>mtDoCheck(force),force?0:250)}
@@ -182,21 +192,37 @@ $('mtForm').onsubmit=e=>{
  if(!v.date||!v.time){showToast('Chọn ngày và giờ bắt đầu');return}
  if(!v.att.length){showToast('Chọn ít nhất một người tham gia');return}
  const start=v.date+'T'+v.time;
- const bad=mtConflicts(b,start,v.dur,v.att,mtEditId,(mtBusy[b.id]||{}).map||{},busySlotsNow()).filter(x=>x.hard.length);
+ const all=mtConflicts(b,start,v.dur,v.att,mtEditId,(mtBusy[b.id]||{}).map||{},busySlotsNow()),bad=all.filter(x=>x.hard.length);
  if(bad.length&&!confirm(bad.map(x=>x.name).join(', ')+' đang trùng lịch. Vẫn đặt cuộc họp này?'))return;
  pushUndo();
- if(mtEditId){const m=b.meetings.find(x=>x.id===mtEditId);if(m)Object.assign(m,{title:v.title,start,dur:v.dur,place:v.place,note:v.note,att:v.att})}
- else b.meetings.push({id:uid(),title:v.title,start,dur:v.dur,place:v.place,note:v.note,att:v.att,by:user.email,created:new Date().toISOString()});
+ const cf={},cs={};bad.forEach(x=>{cf[x.id]=x.hard.map(y=>y.k+y.s).join(',')});all.forEach(x=>{if(x.soft.length)cs[x.id]=x.soft.map(y=>y.s).join(',')});
+ let saved;
+ if(mtEditId){
+  saved=b.meetings.find(x=>x.id===mtEditId);
+  if(saved){
+   const timeChanged=saved.start!==start||(saved.dur||60)!==v.dur;
+   Object.assign(saved,{title:v.title,start,dur:v.dur,place:v.place,note:v.note,att:v.att});
+   const old=saved.rsvp||{},keep={};
+   if(!timeChanged)v.att.forEach(id=>{if(old[id])keep[id]=old[id]});      // đổi giờ thì mọi người phải xác nhận lại
+   if(v.att.includes(saved.by))keep[saved.by]='yes';
+   saved.rsvp=keep;
+  }
+ }else{
+  saved={id:uid(),title:v.title,start,dur:v.dur,place:v.place,note:v.note,att:v.att,by:user.email,created:new Date().toISOString(),rsvp:v.att.includes(user.email)?{[user.email]:'yes'}:{}};
+  b.meetings.push(saved);
+ }
+ if(saved){mtAck(b,saved);db.mtSeen[saved.id].cf=cf;db.mtSeen[saved.id].cs=cs}
  closeModals();render();showToast(mtEditId?'Đã lưu cuộc họp':'Đã đặt cuộc họp '+mtDayLabel(start)+' lúc '+hmOf(start),true);
 };
 $('mtDelete').onclick=()=>{
  const b=mtBoard;if(!b||!mtEditId||!confirm('Xóa cuộc họp này?'))return;
- pushUndo();b.meetings=b.meetings.filter(x=>x.id!==mtEditId);closeModals();render();showToast('Đã xóa cuộc họp',true);
+ pushUndo();if(db.mtSeen)delete db.mtSeen[mtEditId];b.meetings=b.meetings.filter(x=>x.id!==mtEditId);closeModals();render();showToast('Đã xóa cuộc họp',true);
 };
 
 /* ---------- Hiển thị trong bảng cá nhân (dòng "Lịch cố định") ---------- */
 function makeMeetingChip(b,m){
  const now=Date.now(),s=dueTs(m.start),e=dueTs(mtEnd(m));let st='';if(now>=e)st='past';else if(now>=s)st='live';
+ if(myRsvp(m)==='no')st+=' declined';
  const el=document.createElement('button');el.type='button';el.className='ev-chip mt '+st;
  el.innerHTML='<span class="ev-time">'+esc(mtRange(m))+(st==='live'?'<b class="ev-live">Đang diễn ra</b>':'')+'</span><span class="ev-title">🤝 '+esc(m.title)+'</span>'+(m.place?'<span class="ev-place">📍 '+esc(m.place)+'</span>':'')+'<span class="ev-place">Nhóm: '+esc(b.name)+'</span>'+(mtJoinState(m)==='ok'?'<span class="mt-join">📹 Vào họp</span>':'');
  el.title='Cuộc họp nhóm “'+b.name+'”';el.onclick=e=>{if(e.target.closest('.mt-join')){e.stopPropagation();joinMeeting(b,m)}else openMeetingForm(b,m)};
@@ -212,7 +238,7 @@ function zoomMeetings(wrap,day){
 /* ---------- Nhắc họp (dùng chung chuông thông báo) ---------- */
 function meetingReminderItems(){
  const now=Date.now(),out=[];
- meetingsForMe().forEach(({b,m})=>{
+ activeMeetingsForMe().forEach(({b,m})=>{
   const ts=dueTs(m.start);if(isNaN(ts)||ts<now)return;
   let state=null;if(ts-now<=30*60000)state='soon';else if(ts-now<=7*86400000)state='up';
   if(state)out.push({key:'mt:'+b.id+':'+m.id+':'+m.start+':'+state,state,t:{id:m.id,title:'Họp: '+m.title,due:m.start},b,ts,ev:true,mt:true,day:m.start.slice(0,10)});
@@ -221,7 +247,7 @@ function meetingReminderItems(){
 }
 
 /* ---------- Cài đặt: chia sẻ khung giờ bận ---------- */
-function refreshShareBusyUI(){const c=$('shareBusyChk');if(c&&db)c.checked=db.shareBusy!==false}
+function refreshShareBusyUI(){const c=$('shareBusyChk');if(c&&db)c.checked=db.shareBusy!==false;const n=$('mtNearSel');if(n&&db)n.value=String(mtNear())}
 $('shareBusyChk').onchange=e=>{
  db.shareBusy=e.target.checked;save();busyLast=null;busyRetryAt=0;scheduleBusyPush();
  showToast(db.shareBusy?'Đã bật chia sẻ khung giờ bận với nhóm':'Đã tắt. Thành viên sẽ không thấy lịch bận của bạn khi đặt họp');
@@ -281,4 +307,122 @@ async function joinMeeting(b,m){
  }catch(e){leaveCall();showToast((e&&e.message)||'Không vào được cuộc họp')}
 }
 $('callLeave').onclick=leaveCall;
+
+/* ====================================================================
+   Đợt 2: xác nhận tham dự, thông báo mời họp, đổi giờ, hủy họp và trùng lịch
+   - Xác nhận lưu ngay trong cuộc họp: m.rsvp={mã thành viên:'yes'|'maybe'|'no'} (mỗi người chỉ sửa phần của mình, khi gộp dữ liệu
+     được gộp theo từng người). Đổi giờ thì mọi người phải xác nhận lại. Người đã từ chối thì không bị tính bận, không bị nhắc.
+   - db.mtSeen[mã họp]={b,title,start,sig,rs,cf}: lần cuối tôi xem cuộc họp đó. So với dữ liệu hiện tại để biết cuộc họp vừa
+     được mời, đổi giờ hoặc địa điểm, bị hủy, có người đổi xác nhận (báo cho người tạo) hay phát sinh trùng lịch mới.
+   ==================================================================== */
+const RS_LABEL={yes:'Tham dự',maybe:'Chưa chắc',no:'Không thể'},RS_ICON={yes:'✓',maybe:'?',no:'✕'};
+const myRsvp=m=>(m.rsvp||{})[user.email]||'';
+const activeMeetingsForMe=()=>meetingsForMe().filter(x=>myRsvp(x.m)!=='no');
+const mtSig=m=>m.start+'|'+(m.dur||60)+'|'+(m.place||'');
+function mtRsvpCount(m){const c={yes:0,maybe:0,no:0,wait:0};(m.att||[]).forEach(id=>{const v=(m.rsvp||{})[id];if(v&&c[v]!=null)c[v]++;else c.wait++});return c}
+function mtRsvpText(m){const c=mtRsvpCount(m),me=myRsvp(m);return '✓ '+c.yes+' · ? '+c.maybe+' · ✕ '+c.no+' · chờ '+c.wait+((m.att||[]).includes(user.email)?' · bạn: '+(me?RS_LABEL[me]:'chưa trả lời'):'')}
+function mtAck(b,m){db.mtSeen=db.mtSeen||{};const old=db.mtSeen[m.id];db.mtSeen[m.id]={b:b.id,title:m.title,start:m.start,dur:m.dur||60,sig:mtSig(m),rs:{...(m.rsvp||{})},cf:(old&&old.cf)||{},cs:(old&&old.cs)||{}}}
+
+function mtUpdateRsvpRow(b,m){
+ const row=$('mtRsvpRow'),show=!!m&&(m.att||[]).includes(user.email);
+ row.hidden=!show;if(!show)return;
+ const cur=myRsvp(m);
+ row.querySelectorAll('.mt-rs').forEach(x=>x.classList.toggle('on',x.dataset.rs===cur));
+ $('mtRsvpList').innerHTML=(m.att||[]).map(id=>{const mem=memberOf(b,id)||{name:'Thành viên'},v=(m.rsvp||{})[id];return'<div>'+esc(mem.name)+(id===user.email?' (tôi)':'')+': '+(v?RS_ICON[v]+' '+RS_LABEL[v]:'· chưa trả lời')+'</div>'}).join('');
+}
+$('mtRsvpRow').querySelectorAll('.mt-rs').forEach(btn=>btn.onclick=()=>{
+ const b=mtBoard,m=b&&b.meetings.find(x=>x.id===mtEditId);if(!m)return;
+ pushUndo();m.rsvp=m.rsvp||{};m.rsvp[user.email]=btn.dataset.rs;mtAck(b,m);render();mtUpdateRsvpRow(b,m);
+ showToast('Đã ghi nhận: '+RS_LABEL[btn.dataset.rs],true);
+});
+
+/* ---------- Thông báo về cuộc họp ---------- */
+let mtNoticeCache=null,mtOtherConf=[],mtOtherSig='';
+function meetingNotices(){
+ if(mtNoticeCache)return mtNoticeCache;
+ if(!db||!user)return[];
+ db.mtSeen=db.mtSeen||{};
+ const out=[],now=Date.now(),exists=new Set(),boardIds=new Set(db.boards.map(b=>b.id));
+ db.boards.forEach(b=>{
+  if(b.type!=='team')return;
+  (b.meetings||[]).forEach(m=>{
+   const mine=(m.att||[]).includes(user.email),creator=m.by===user.email;
+   if(!mine&&!creator)return;
+   exists.add(m.id);
+   const endTs=dueTs(mtEnd(m));if(isNaN(endTs)||endTs<now)return;       // họp đã qua thì không báo nữa
+   let rec=db.mtSeen[m.id];
+   if(!rec){
+    if(creator||myRsvp(m)){mtAck(b,m);rec=db.mtSeen[m.id]}
+    else{const by=memberOf(b,m.by);out.push({key:'mn:inv:'+m.id,b,m,icon:'📩',title:'Bạn được mời họp',text:'“'+m.title+'” · '+mtDayLabel(m.start)+' '+mtRange(m)+' · nhóm '+b.name+(by?' · mời bởi '+by.name:'')});return}
+   }
+   if(rec.sig!==mtSig(m))out.push({key:'mn:chg:'+m.id+':'+mtSig(m),b,m,icon:'🔄',title:'Cuộc họp đã đổi',text:'“'+m.title+'” nay là '+mtDayLabel(m.start)+' '+mtRange(m)+(m.place?' · '+m.place:'')+' (trước đó '+mtDayLabel(rec.start)+' '+hmOf(rec.start)+'). Hãy xác nhận lại.'});
+   if(creator){
+    const ch=Object.keys(m.rsvp||{}).filter(id=>id!==user.email&&m.rsvp[id]!==(rec.rs||{})[id]);
+    if(ch.length)out.push({key:'mn:rs:'+m.id+':'+ch.map(id=>id+m.rsvp[id]).join(','),b,m,icon:RS_ICON[m.rsvp[ch[0]]]||'✓',title:'Phản hồi cuộc họp “'+m.title+'”',text:ch.map(id=>((memberOf(b,id)||{}).name||'Thành viên')+': '+(RS_LABEL[m.rsvp[id]]||'')).join(' · ')});
+   }
+  });
+ });
+ Object.keys(db.mtSeen).forEach(id=>{                                    // cuộc họp đã bị hủy hoặc tôi không còn trong danh sách
+  const rec=db.mtSeen[id];if(exists.has(id)||!boardIds.has(rec.b))return;
+  if(dueTs(rec.start)+(rec.dur||60)*60000<now-2*3600000){delete db.mtSeen[id];return}
+  out.push({key:'mn:del:'+id,rec,id,icon:'🚫',title:'Cuộc họp đã bị hủy',text:'“'+rec.title+'” ('+mtDayLabel(rec.start)+' '+hmOf(rec.start)+') đã bị hủy, hoặc bạn không còn trong danh sách tham gia.'});
+ });
+ const mine=busySlotsNow();                                              // trùng với lịch của chính tôi
+ activeMeetingsForMe().forEach(({b,m})=>{
+  const s=m.start,e=mtEnd(m);if(dueTs(e)<now||dueTs(s)-now>14*86400000)return;
+  const hits=mine.filter(x=>x.k!=='d'&&!(x.k==='m'&&x.r===m.id)&&x.s<e&&s<x.e);
+  if(hits.length)out.push({key:'mn:cf:'+m.id+':'+hits.map(x=>x.k+x.s).join(','),b,m,icon:'⚠',title:'Cuộc họp trùng lịch của bạn',text:'“'+m.title+'” '+mtDayLabel(s)+' '+mtRange(m)+' trùng '+hits.map(x=>MT_KIND[x.k]+' '+hmOf(x.s)+'–'+hmOf(x.e)).join(', ')});
+ });
+ mtOtherConf.forEach(c=>{                                                // người khác vừa phát sinh trùng với cuộc họp tôi tạo
+  const bb=db.boards.find(x=>x.id===c.b.id),m=bb&&(bb.meetings||[]).find(x=>x.id===c.m.id);if(!m||dueTs(mtEnd(m))<now)return;
+  const rec=db.mtSeen[m.id];if(rec&&(c.csig?(rec.cs||{})[c.uid]===c.csig:(rec.cf||{})[c.uid]===c.sig))return;
+  out.push(c);
+ });
+ return mtNoticeCache=out;
+}
+async function mtRefreshOthers(){
+ if(!db||!user||typeof Store==='undefined'||!Store.busy)return;
+ const now=Date.now(),res=[];
+ for(const b of db.boards.filter(x=>x.type==='team')){
+  const mine=(b.meetings||[]).filter(m=>m.by===user.email&&dueTs(mtEnd(m))>=now&&dueTs(m.start)-now<=14*86400000);
+  if(!mine.length)continue;
+  const info=await mtFetchBusy(b,true);if(info.err)continue;
+  mine.forEach(m=>{
+   mtConflicts(b,m.start,m.dur||60,(m.att||[]).filter(id=>id!==user.email&&(m.rsvp||{})[id]!=='no'),m.id,info.map,[]).forEach(r=>{
+    if(r.soft.length){
+     const csig=r.soft.map(y=>y.s).join(',');
+     res.push({key:'mn:od:'+m.id+':'+r.id+':'+csig,b,m,uid:r.id,csig,icon:'●',title:r.name+' có việc đến hạn sát giờ họp',text:'“'+m.title+'” '+mtDayLabel(m.start)+' '+mtRange(m)+' · '+r.soft.map(y=>'việc đến hạn lúc '+hmOf(y.s)+(y.before?' (trước giờ họp '+y.before+' phút)':' (trong giờ họp)')).join(', ')});
+    }
+    if(!r.hard.length)return;
+    const sig=r.hard.map(y=>y.k+y.s).join(',');
+    res.push({key:'mn:oc:'+m.id+':'+r.id+':'+sig,b,m,uid:r.id,sig,icon:'⚠',title:r.name+' có lịch trùng với cuộc họp của bạn',text:'“'+m.title+'” '+mtDayLabel(m.start)+' '+mtRange(m)+' trùng '+r.hard.map(y=>MT_KIND[y.k]+' '+hmOf(y.s)+'–'+hmOf(y.e)).join(', ')});
+   });
+  });
+ }
+ const sg=JSON.stringify(res.map(x=>x.key));
+ if(sg!==mtOtherSig){mtOtherSig=sg;mtOtherConf=res;renderNotifications()}
+}
+setTimeout(mtRefreshOthers,4000);setInterval(mtRefreshOthers,120000);
+
+function meetingNoticeHtml(){
+ const l=meetingNotices();if(!l.length)return'';
+ return'<div class="notif-group">CUỘC HỌP · '+l.length+'</div>'+l.map(n=>'<button type="button" class="notification-item notif-meeting'+(!db.seen[n.key]?' unread':'')+'" data-mtn="'+esc(n.key)+'"><strong>'+n.icon+' '+esc(n.title)+'</strong><span>'+esc(n.text)+'</span></button>').join('');
+}
+function meetingNoticeBind(){
+ const map={};meetingNotices().forEach(n=>{map[n.key]=n});
+ $('notificationList').querySelectorAll('[data-mtn]').forEach(el=>el.onclick=()=>{
+  const n=map[el.dataset.mtn];if(!n)return;
+  db.seen[n.key]=1;$('notificationPanel').classList.remove('open');
+  if(n.rec){delete db.mtSeen[n.id];save();renderNotifications();showToast('Đã xóa thông báo');return}
+  if(n.uid){db.mtSeen[n.m.id]=db.mtSeen[n.m.id]||{};const r=db.mtSeen[n.m.id];if(n.csig){r.cs=r.cs||{};r.cs[n.uid]=n.csig}else{r.cf=r.cf||{};r.cf[n.uid]=n.sig}}
+  openMeetingForm(db.boards.find(x=>x.id===n.b.id)||n.b,n.m);
+ });
+}
+(function(){const orig=renderNotifications;renderNotifications=function(){mtNoticeCache=null;orig.apply(this,arguments);meetingNoticeBind()}})();
+
+/* ---------- Cài đặt: khoảng "sát giờ họp" ---------- */
+$('mtNearSel').onchange=e=>{
+ db.mtNearMin=+e.target.value;save();mtOtherSig='';mtRefreshOthers();renderNotifications();
+ showToast(db.mtNearMin?'Sẽ cảnh báo việc đến hạn trong '+db.mtNearMin+' phút trước giờ họp':'Đã tắt cảnh báo việc đến hạn sát giờ họp (vẫn báo việc đến hạn trong giờ họp)');
+};
 

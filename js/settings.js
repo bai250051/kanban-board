@@ -27,7 +27,7 @@ function buildICS(){
    Object.entries(ev.overrides||{}).forEach(([day,o])=>{if(day<ev.from||day>ev.to||(ev.skip||[]).includes(day))return;L.push('BEGIN:VEVENT','UID:event-'+ev.id+'-'+day+'@kanban','DTSTAMP:'+stamp,'DTSTART:'+icsDT(day+'T'+o.start),'DTEND:'+icsDT(day+'T'+o.end),'SUMMARY:'+icsEsc(ev.title),...((o.place||ev.place)?['LOCATION:'+icsEsc(o.place||ev.place)]:[]),...alarm(rm,'Sắp bắt đầu: '+ev.title),'END:VEVENT');n++});
   });
  });
- (typeof meetingsForMe==='function'?meetingsForMe():[]).forEach(({b,m})=>{L.push('BEGIN:VEVENT','UID:meeting-'+m.id+'@kanban','DTSTAMP:'+stamp,'DTSTART;TZID='+ICS_TZ+':'+icsDT(m.start),'DTEND;TZID='+ICS_TZ+':'+icsDT(mtEnd(m)),'SUMMARY:'+icsEsc('🤝 Họp: '+m.title),...(m.place?['LOCATION:'+icsEsc(m.place)]:[]),'DESCRIPTION:'+icsEsc('Nhóm '+b.name+(m.note?' — '+m.note:'')),...alarm(30,'Sắp họp: '+m.title),'END:VEVENT');n++});
+ (typeof activeMeetingsForMe==='function'?activeMeetingsForMe():[]).forEach(({b,m})=>{L.push('BEGIN:VEVENT','UID:meeting-'+m.id+'@kanban','DTSTAMP:'+stamp,'DTSTART;TZID='+ICS_TZ+':'+icsDT(m.start),'DTEND;TZID='+ICS_TZ+':'+icsDT(mtEnd(m)),'SUMMARY:'+icsEsc('🤝 Họp: '+m.title),...(m.place?['LOCATION:'+icsEsc(m.place)]:[]),'DESCRIPTION:'+icsEsc('Nhóm '+b.name+(m.note?' — '+m.note:'')),...alarm(30,'Sắp họp: '+m.title),'END:VEVENT');n++});
  L.push('END:VCALENDAR');return{text:L.map(icsLine).join('\r\n')+'\r\n',count:n};
 }
 $('exportIcs').onclick=()=>{

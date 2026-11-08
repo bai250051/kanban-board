@@ -51,11 +51,24 @@ const SupabaseStore=(()=>{
  }
  /* Gộp ba bên: base (lần đồng bộ trước), mine (bản trên máy), theirs (bản máy chủ).
     Phần ai đổi thì lấy; cả hai cùng đổi thì ưu tiên bản máy chủ. Việc (thẻ) được gộp theo mã. */
- function mergeList(baseArr,mineArr,theirsArr){
+ function mergeFields(b,m,t){   // gộp từng trường của một cuộc họp; rsvp gộp theo từng người (mỗi người chỉ sửa phần của mình)
+  const B=b||{},out={},keys=new Set([...Object.keys(B),...Object.keys(m),...Object.keys(t)]);
+  keys.forEach(k=>{
+   if(k==='rsvp'){
+    const r={},us=new Set([...Object.keys(B.rsvp||{}),...Object.keys(m.rsvp||{}),...Object.keys(t.rsvp||{})]);
+    us.forEach(u=>{const bv=(B.rsvp||{})[u],mv=(m.rsvp||{})[u],tv=(t.rsvp||{})[u],v=mv===bv?tv:(tv===bv?mv:tv);if(v!==undefined)r[u]=v});
+    out.rsvp=r;return;
+   }
+   const bv=J(B[k]),mv=J(m[k]),tv=J(t[k]),pick=mv===bv?t[k]:(tv===bv?m[k]:t[k]);
+   if(pick!==undefined)out[k]=pick;
+  });
+  return out;
+ }
+ function mergeList(baseArr,mineArr,theirsArr,fieldwise){
   const idx=a=>new Map((a||[]).map(x=>[x.id,x])),B=idx(baseArr),M=idx(mineArr),T=idx(theirsArr);
   const pickItem=id=>{
    const b=B.get(id),m=M.get(id),t=T.get(id),jb=b&&J(b);
-   if(m&&t)return J(m)===jb?t:(J(t)===jb?m:t);
+   if(m&&t){if(J(m)===jb)return t;if(J(t)===jb)return m;return fieldwise?mergeFields(b,m,t):t}
    if(m&&!t)return !b?m:(J(m)===jb?null:m);
    if(!m&&t)return !b?t:(J(t)===jb?null:t);
    return null;
@@ -72,7 +85,7 @@ const SupabaseStore=(()=>{
    if(v!==undefined)out[k]=v;
   }
   out.tasks=mergeList(base&&base.tasks,mine.tasks,theirs.tasks);
-  out.meetings=mergeList(base&&base.meetings,mine.meetings,theirs.meetings);   // cuộc họp gộp theo mã như thẻ việc
+  out.meetings=mergeList(base&&base.meetings,mine.meetings,theirs.meetings,true);   // cuộc họp gộp theo mã như thẻ việc
   return out;
  }
 

@@ -7,9 +7,10 @@
 //  - đang trong khung giờ cho phép vào: từ 15 phút trước giờ bắt đầu đến 2 giờ sau giờ kết thúc.
 // Vé chỉ có giá trị cho đúng phòng của cuộc họp đó. Người tạo cuộc họp và chủ bảng là điều hành viên (moderator).
 //
+// Hàm tự xác thực người gọi bằng sb.auth.getUser() nên có thể TẮT "Verify JWT" của nền tảng nếu bị báo Invalid JWT (an toàn).
 // Secret cần đặt (xem supabase/README.md): JAAS_KID (dạng "vpaas-magic-cookie-.../abc123") và JAAS_PRIVATE_KEY (PKCS#8 PEM).
-import { SignJWT, importPKCS8 } from "https://esm.sh/jose@5.9.6";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { SignJWT, importPKCS8 } from "npm:jose@5.9.6";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,15 @@ const json = (o: unknown, status = 200) =>
 
 export const JOIN_BEFORE_MIN = 15;
 export const JOIN_AFTER_END_MIN = 120;
+// Khóa công khai của dự án: dùng biến cũ SUPABASE_ANON_KEY nếu còn, nếu không thì lấy khóa Publishable (biến SUPABASE_PUBLISHABLE_KEYS là JSON)
+function publicKey(env: (k: string) => string | undefined): string {
+  const legacy = env("SUPABASE_ANON_KEY");
+  if (legacy) return legacy;
+  try {
+    const o = JSON.parse(env("SUPABASE_PUBLISHABLE_KEYS") || "{}");
+    return o["default"] || (Object.values(o)[0] as string) || "";
+  } catch { return ""; }
+}
 const clean = (s: string) => String(s).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60);
 
 export async function handle(
@@ -47,7 +57,7 @@ export async function handle(
     return json({ error: "Thiếu mã bảng hoặc mã cuộc họp" }, 400);
   }
 
-  const sb = mkClient(env("SUPABASE_URL") || "", env("SUPABASE_ANON_KEY") || "", { global: { headers: { Authorization: auth } } });
+  const sb = mkClient(env("SUPABASE_URL") || "", publicKey(env), { global: { headers: { Authorization: auth } } });
   const { data: ud, error: ue } = await sb.auth.getUser();
   if (ue || !ud || !ud.user) return json({ error: "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại" }, 401);
   const uid: string = ud.user.id;

@@ -50,7 +50,7 @@ Hàm cho web gọi: `find_member_by_no`, `send_invitation`, `respond_invitation`
 - Ở bảng nhóm bấm **🤝 Cuộc họp → Tạo cuộc họp**, chọn ngày, giờ, thời lượng, người tham gia. Web báo ai đang trùng lịch cố định hoặc cuộc họp khác, ghi chú việc đến hạn cùng ngày, và gợi ý giờ mọi người đều trống. Cuộc họp hiện trong dòng **Lịch cố định** của bảng cá nhân người được mời, có nhắc trước 30 phút và xuất được ra file `.ics`.
 - Bảng cá nhân của mỗi người là dữ liệu riêng, nên **mỗi máy tự đẩy khung giờ bận của chính mình** lên `busy_slots` (6 tuần tới) mỗi khi dữ liệu đổi. Vì vậy lịch của người khác chỉ mới như lần cuối họ mở web; web ghi rõ khi dữ liệu cũ hơn 3 ngày hoặc chưa có.
 - Người dùng có thể tắt chia sẻ trong **Cài đặt → Lịch họp nhóm**.
-- Việc chỉ có hạn (chưa có thời lượng) không tính là trùng, chỉ nhắc nhẹ nếu hạn nằm trong giờ họp.
+- Việc chỉ có hạn (chưa có thời lượng) không tính là trùng. Web cảnh báo nhẹ khi người được mời có việc đến hạn trong giờ họp hoặc trong vòng 60 phút ngay trước giờ họp (chỉnh 0 / 30 / 60 / 90 / 120 phút ở **Cài đặt → Lịch họp nhóm**). Cảnh báo hiện lúc đặt giờ và cả sau đó dưới dạng thông báo cho người tạo, không kèm tên việc.
 
 ## Họp trực tuyến ngay trong web (JaaS)
 Nút **📹 Vào họp** (trong cuộc họp, danh sách cuộc họp và thẻ họp ở bảng cá nhân) mở khung họp có cam, mic, chia sẻ màn hình và chat ngay trong trang. Web nhúng **JaaS** (Jitsi as a Service của 8x8) bằng Jitsi IFrame API. JaaS bắt buộc mỗi người vào phòng phải có một "vé" (JWT) ký bằng khóa riêng, nên khóa này đặt ở một Edge Function (`functions/jaas-token`), không bao giờ nằm trong code web.
@@ -65,7 +65,7 @@ Cách bật (làm một lần):
    supabase secrets set JAAS_PRIVATE_KEY="$(cat khoa8.pem)"
    supabase functions deploy jaas-token
    ```
-   (Cách khác không cần CLI: Dashboard, mục Edge Functions, tạo hàm `jaas-token` bằng trình soạn thảo, dán nội dung `functions/jaas-token/index.ts`, rồi thêm hai secret ở trang Secrets. `SUPABASE_URL` và `SUPABASE_ANON_KEY` được Supabase tự cấp cho hàm.)
+   (Cách khác không cần CLI: Dashboard, mục Edge Functions, tạo hàm `jaas-token` bằng trình soạn thảo, dán nội dung `functions/jaas-token/index.ts`, rồi thêm hai secret ở trang Secrets. `SUPABASE_URL` và khóa công khai được Supabase tự cấp cho hàm; hàm đọc được cả khóa cũ `SUPABASE_ANON_KEY` lẫn khóa mới Publishable. Hàm tự xác thực người gọi, nên nếu web bị báo 401 hoặc `Invalid JWT` từ nền tảng thì vào trang chi tiết của hàm và tắt tùy chọn Verify JWT.)
 5. Tải lại web, mở một cuộc họp có giờ trong vòng 15 phút tới, bấm **Vào họp**.
 
 Quy tắc hàm cấp vé: chỉ cấp cho thành viên đã đăng nhập của bảng nhóm, có tên trong danh sách tham gia, trong khung từ 15 phút trước giờ bắt đầu đến 2 giờ sau giờ kết thúc, và vé chỉ dùng được cho đúng phòng của cuộc họp đó. Người tạo cuộc họp và chủ bảng là điều hành viên. Ghi hình và phát trực tiếp bị tắt.
