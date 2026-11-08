@@ -68,6 +68,8 @@ Cách bật (làm một lần):
    (Cách khác không cần CLI: Dashboard, mục Edge Functions, tạo hàm `jaas-token` bằng trình soạn thảo, dán nội dung `functions/jaas-token/index.ts`, rồi thêm hai secret ở trang Secrets. `SUPABASE_URL` và khóa công khai được Supabase tự cấp cho hàm; hàm đọc được cả khóa cũ `SUPABASE_ANON_KEY` lẫn khóa mới Publishable. Hàm tự xác thực người gọi, nên nếu web bị báo 401 hoặc `Invalid JWT` từ nền tảng thì vào trang chi tiết của hàm và tắt tùy chọn Verify JWT.)
 5. Tải lại web, mở một cuộc họp có giờ trong vòng 15 phút tới, bấm **Vào họp**.
 
+**Họp ngay:** ở cửa sổ **🤝 Cuộc họp** bấm **⚡ Họp ngay**, đặt tên, chọn thời lượng (30 đến 120 phút) và tick những người muốn mời (mặc định chưa mời ai, có nút Mời cả nhóm). Cuộc họp bắt đầu từ lúc bấm và người tạo vào phòng luôn. Trong lúc họp, người tạo và chủ bảng có nút **➕ Mời thêm**. Hộp Họp ngay có nút sao chép lời nhắn để dán vào nhóm chat, vì web chưa có thông báo đẩy khi đóng trang.
+
 Quy tắc hàm cấp vé: chỉ cấp cho thành viên đã đăng nhập của bảng nhóm, có tên trong danh sách tham gia, trong khung từ 15 phút trước giờ bắt đầu đến 2 giờ sau giờ kết thúc, và vé chỉ dùng được cho đúng phòng của cuộc họp đó. Người tạo cuộc họp và chủ bảng là điều hành viên. Ghi hình và phát trực tiếp bị tắt.
 
 Lưu ý: hình và tiếng đi qua máy chủ của 8x8 (JaaS), không đi qua Supabase. Cần mạng truy cập được `8x8.vc`; trình chặn quảng cáo hoặc mạng trường có thể chặn. Chế độ chạy cục bộ (không đăng nhập Supabase) không họp trực tuyến được.

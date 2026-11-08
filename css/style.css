@@ -757,3 +757,10 @@ html[data-theme=dark] .ev-chip.mt .ev-time{color:#a99fff}
 .mt-rs-list{margin-top:8px;font-size:12px;line-height:1.7;color:var(--muted)}
 .ev-chip.mt.declined{opacity:.5;text-decoration:line-through}
 .notif-meeting strong{display:block}
+
+/* ---- Họp ngay, mời thêm ---- */
+.call-invite{position:absolute;top:56px;right:12px;z-index:5;width:min(360px,92vw);background:#fff;color:#1b1f3b;border-radius:14px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.4);font-size:13px}
+.call-invite[hidden]{display:none}
+.call-invite b{display:block;margin-bottom:10px}
+.call-invite .mt-att{border-color:#d9d9e8}
+.call-invite-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
