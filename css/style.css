@@ -764,3 +764,79 @@ html[data-theme=dark] .ev-chip.mt .ev-time{color:#a99fff}
 .call-invite b{display:block;margin-bottom:10px}
 .call-invite .mt-att{border-color:#d9d9e8}
 .call-invite-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+
+/* =====================================================================
+   CHỈNH GIAO DIỆN — dễ nhìn hơn (đặt cuối file để ghi đè)
+   ===================================================================== */
+
+/* [1] Điện thoại: không để thanh trên cùng làm trang tràn ngang */
+.main{min-width:0;overflow-x:clip}
+.topbar{min-width:0}
+.search{min-width:0}
+.search .glass{display:grid;place-items:center;top:50%;transform:translateY(-50%);pointer-events:none;line-height:0}
+.ico{display:block;flex:none}
+.top-actions .icon-btn .ib-ico{display:inline-grid;place-items:center;line-height:0}
+@media(max-width:760px){
+  .topbar{gap:8px;padding:0 10px}
+  .search{flex:1 1 0;width:auto}
+  .top-actions{gap:6px;flex:none}
+  .profile{gap:6px;padding-left:8px}
+}
+@media(max-width:560px){
+  .vn-clock{display:none}
+  #quickVoice,#helpBtn,#settingsBtn{display:none}
+}
+
+/* [9] Nút Đăng xuất rõ hơn */
+.logout-btn{font-size:12px;font-weight:700;color:#5c6680;padding:3px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;line-height:1.3;transition:color .15s,border-color .15s,background .15s}
+.logout-btn:hover,.logout-btn:focus-visible{color:#d65363;border-color:#d6536466;background:#fff5f6}
+html[data-theme=dark] .logout-btn{color:#a8b2cc;background:#202637;border-color:#35405a}
+html[data-theme=dark] .logout-btn:hover,html[data-theme=dark] .logout-btn:focus-visible{color:#ff8a98;border-color:#ff8a9866;background:#2a2030}
+
+/* [2] Cài đặt: ô tick nằm cạnh chữ, không bị kéo giãn */
+.field input[type=checkbox],.pull-all input[type=checkbox],.col-done input[type=checkbox]{width:18px;height:18px;flex:none;padding:0;margin:0;border-radius:5px;accent-color:var(--purple);cursor:pointer}
+.field label.pull-all{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.45;font-weight:700;text-align:left;margin:0 0 6px}
+.field label.pull-all input[type=checkbox]{margin-top:1px}
+
+/* [3] Thanh công cụ bảng: tiêu đề + nút thao tác ở hàng trên, bộ lọc ở hàng dưới */
+.board-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 14px}
+.board-toolbar>div:first-child{flex:1 1 220px;min-width:0}
+.board-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.board-filters{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:12px;border-top:1px dashed var(--line)}
+.board-filters .filter-select{flex:0 1 auto;min-width:118px;max-width:165px}
+.board-filters #assigneeFilter{min-width:160px;max-width:185px}
+.board-filters .btn,.board-actions .btn{white-space:nowrap}
+@media(max-width:760px){
+  .board-actions{justify-content:flex-start;flex:1 0 100%}
+  .board-filters .filter-select{flex:1 1 140px;max-width:none}
+}
+
+/* [4] Tùy chỉnh cột: gọn trong một hàng, nút × không rớt dòng */
+#colsModal .modal{width:min(640px,100%)}
+.col-row{gap:8px}
+.col-row .col-name{flex:1 1 120px;min-width:110px}
+.col-row .swatches{gap:6px;flex:none}
+.col-row .swatch{width:20px;height:20px}
+.col-row .col-ctl{width:28px;height:28px;flex:none;display:grid;place-items:center;padding:0}
+@media(max-width:560px){.col-row .col-name{flex:1 0 100%}}
+
+/* [5] Trang Tính điểm: tiêu đề bên trái, nút bên phải trên một hàng */
+#gradesView .heading-row{align-items:flex-start}
+#gradesView .heading-row .board-title-wrap{flex:1 1 0;min-width:0}
+#gradesView .heading-row .subtitle{max-width:640px}
+#gradesView .heading-row .actions{flex:none;flex-wrap:nowrap;justify-content:flex-end}
+@media(max-width:760px){#gradesView .heading-row .actions{flex-wrap:wrap;justify-content:flex-start}}
+
+/* [6] Ô chọn không bị kéo cao hơn ô bên cạnh */
+.field{align-content:start}
+.field select{height:auto}
+
+/* [7] Biểu tượng SVG đồng bộ màu với nút */
+.stat-icon .ico{width:20px;height:20px}
+.top-actions .icon-btn .ico{width:18px;height:18px}
+
+/* [8] Thống kê: số và ghi chú tách rời, thẳng hàng */
+.bar-row{grid-template-columns:130px 1fr 92px}
+.bar-val{font-variant-numeric:tabular-nums}
+.bar-val small{margin-left:6px;font-size:11px}
+@media(max-width:620px){.bar-row{grid-template-columns:96px 1fr 84px}}
