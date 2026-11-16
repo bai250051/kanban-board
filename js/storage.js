@@ -49,6 +49,8 @@ const memberOf=(b,id)=>b.members.find(m=>m.id===id);
 
 /* ---------- Xác thực ---------- */
 let authMode='login';
+const GMAIL_RE=/^[a-z0-9]+(?:[._+-]?[a-z0-9]+)*@gmail\.com$/;
+const isGmail=e=>GMAIL_RE.test(e);
 function setAuthMode(m){authMode=m;const reg=m==='register';$('loginTab').classList.toggle('active',!reg);$('registerTab').classList.toggle('active',reg);$('nameField').style.display=reg?'grid':'none';$('authTitle').textContent=reg?'Tạo tài khoản mới':'Chào mừng trở lại!';$('authLead').textContent=reg?'Chỉ mất một phút để bắt đầu quản lý công việc.':'Đăng nhập để tiếp tục quản lý công việc của bạn.';$('authSubmit').textContent=reg?'Tạo tài khoản':'Đăng nhập vào bảng';$('authError').textContent=''}
 function showLogin(){$('loginScreen').classList.add('show')}
 async function enterApp(u){
@@ -66,6 +68,7 @@ $('loginTab').onclick=()=>setAuthMode('login');$('registerTab').onclick=()=>setA
 $('authForm').addEventListener('submit',async e=>{
  e.preventDefault();const email=$('authEmail').value.trim().toLowerCase(),pw=$('authPassword').value,name=$('authName').value.trim(),btn=$('authSubmit');
  if(authMode==='register'&&!name){$('authError').textContent='Vui lòng nhập họ và tên.';return}
+ if(!isGmail(email)){$('authError').textContent='Email phải đúng định dạng Gmail, ví dụ: ten@gmail.com.';$('authEmail').focus();return}
  btn.disabled=true;
  try{
   const r=authMode==='register'?await Store.register({name,email,password:pw}):await Store.login({email,password:pw});

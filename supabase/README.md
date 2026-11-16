@@ -52,6 +52,23 @@ Hàm cho web gọi: `find_member_by_no`, `send_invitation`, `respond_invitation`
 - Người dùng có thể tắt chia sẻ trong **Cài đặt → Lịch họp nhóm**.
 - Việc chỉ có hạn (chưa có thời lượng) không tính là trùng. Web cảnh báo nhẹ khi người được mời có việc đến hạn trong giờ họp hoặc trong vòng 60 phút ngay trước giờ họp (chỉnh 0 / 30 / 60 / 90 / 120 phút ở **Cài đặt → Lịch họp nhóm**). Cảnh báo hiện lúc đặt giờ và cả sau đó dưới dạng thông báo cho người tạo, không kèm tên việc.
 
+## Nhắc việc qua email (trước hạn 30 hoặc 60 phút)
+Mỗi người bật trong **Cài đặt → Nhắc việc qua email** và chọn nhắc trước 30 phút, 60 phút hoặc cả hai. Cứ 5 phút, pg_cron gọi Edge Function `send-reminders`; hàm đọc các việc **chưa xong, có hạn kèm giờ** của những người đã bật (kể cả việc nhóm giao cho họ dù họ chưa mở web) rồi gửi một email qua SMTP. Việc có thẻ cá nhân liên kết với việc nhóm chỉ nhắc một lần. Email gửi tới địa chỉ đăng nhập của tài khoản, ghi tên việc, hạn (giờ Việt Nam), tên bảng và đường dẫn mở web. Mỗi việc ở mỗi mốc chỉ gửi một lần; đổi hạn thì được nhắc lại. Nếu bật cả hai mốc mà việc chỉ còn 20 phút lúc được quét thì chỉ gửi mốc 30 phút (không gửi dồn hai thư).
+
+Cách bật (làm một lần):
+1. **SQL:** chạy `email_reminders.sql` trong SQL Editor (tạo bảng cài đặt, bảng nhật ký và hàm lấy danh sách người nhận).
+2. **Mật khẩu ứng dụng Gmail** (không cần tên miền): vào tài khoản Google, bật **Xác minh 2 bước**, rồi tạo **Mật khẩu ứng dụng** (chuỗi 16 ký tự). Tuyệt đối không dùng mật khẩu Gmail thật và không gửi chuỗi này cho ai. Tên các mục của Google có thể thay đổi.
+3. **Hàm Edge:** Dashboard, Edge Functions, tạo hàm tên đúng là `send-reminders` bằng trình soạn thảo, dán nội dung `functions/send-reminders/index.ts`, deploy. **Tắt "Verify JWT"** của hàm này (ở trang chi tiết hàm), vì pg_cron không gửi JWT; hàm tự kiểm tra mã bí mật hoặc phiên đăng nhập.
+4. **Secrets** (Edge Functions, Secrets): `SMTP_USER` (địa chỉ Gmail gửi thư), `SMTP_PASS` (mật khẩu ứng dụng), `CRON_SECRET` (một chuỗi ngẫu nhiên dài do bạn tự đặt), `APP_URL` (địa chỉ web trên GitHub Pages). Tùy chọn: `SMTP_HOST` (mặc định `smtp.gmail.com`), `SMTP_PORT` (mặc định `465`), `SMTP_FROM`.
+5. **Lên lịch:** Database, Extensions, bật `pg_cron` và `pg_net`. Rồi mở lại `email_reminders.sql`, copy hai lệnh `cron.schedule` ở cuối file (đang để dạng chú thích), thay `<MÃ_DỰ_ÁN>` và `<CRON_SECRET>` bằng giá trị thật, bỏ dấu `--` và chạy.
+6. **Thử:** mở web, Cài đặt, bật nhắc, bấm **✉ Gửi email thử**. Nếu chưa thấy thư, kiểm tra thư rác. Xem lịch sử chạy bằng `select * from cron.job_run_details order by start_time desc limit 10;` và nhật ký của hàm trong Dashboard.
+
+Lưu ý:
+- Mặc định gửi qua cổng **465** (TLS) vì Edge Functions thường hạn chế các cổng SMTP cũ như 25 và 587. Gmail cũng có hạn mức số thư mỗi ngày; với nhóm vài người thường đủ.
+- Thư tới sớm hoặc muộn tối đa khoảng 5 phút do chu kỳ quét. Việc chỉ có ngày (không có giờ) không được nhắc.
+- Chỉ chạy ở bản Supabase. Ở chế độ cục bộ, mục này bị khóa và có ghi chú.
+- Bảng `email_reminder_log` chỉ máy chủ đọc và ghi; người dùng không truy cập được. Mỗi ngày một lệnh dọn dẹp xóa nhật ký cũ hơn 30 ngày (lệnh thứ hai ở cuối file SQL).
+
 ## Họp trực tuyến ngay trong web (JaaS)
 Nút **📹 Vào họp** (trong cuộc họp, danh sách cuộc họp và thẻ họp ở bảng cá nhân) mở khung họp có cam, mic, chia sẻ màn hình và chat ngay trong trang. Web nhúng **JaaS** (Jitsi as a Service của 8x8) bằng Jitsi IFrame API. JaaS bắt buộc mỗi người vào phòng phải có một "vé" (JWT) ký bằng khóa riêng, nên khóa này đặt ở một Edge Function (`functions/jaas-token`), không bao giờ nằm trong code web.
 
@@ -75,4 +92,4 @@ Quy tắc hàm cấp vé: chỉ cấp cho thành viên đã đăng nhập của 
 Lưu ý: hình và tiếng đi qua máy chủ của 8x8 (JaaS), không đi qua Supabase. Cần mạng truy cập được `8x8.vc`; trình chặn quảng cáo hoặc mạng trường có thể chặn. Chế độ chạy cục bộ (không đăng nhập Supabase) không họp trực tuyến được.
 
 ## Đã kiểm thử
-Thư mục `tests/` có bài kiểm thử chạy trên PostgreSQL thường (có giả lập phần xác thực và kho file của Supabase): 23 kiểm tra về mã số thành viên, phân quyền, lời mời, giới hạn tra cứu, file đính kèm và 11 kiểm tra về khung giờ bận (`meetings_test.sql`: ai đọc được gì, không sửa hộ người khác, không lộ sang nhóm khác). Ngoài ra web đã được thử với hai và ba người dùng khác nhau trên một máy chủ giả dùng chính PostgREST và các quy tắc này (đăng ký, mời bằng mã số, chấp nhận, đồng bộ, gộp khi sửa cùng lúc, file đính kèm, gỡ thành viên, chuyển dữ liệu cũ lên). Đây là kiểm thử cục bộ, **chưa chạy trên Supabase thật** (đặc biệt phần Realtime), nên nếu có lỗi hãy gửi nguyên văn thông báo lỗi và mô tả bước làm.
+Thư mục `tests/` có bài kiểm thử chạy trên PostgreSQL thường (có giả lập phần xác thực và kho file của Supabase): 23 kiểm tra về mã số thành viên, phân quyền, lời mời, giới hạn tra cứu, file đính kèm và 11 kiểm tra về khung giờ bận (`meetings_test.sql`: ai đọc được gì, không sửa hộ người khác, không lộ sang nhóm khác), cộng 10 kiểm tra về nhắc email (`email_test.sql`: cài đặt riêng tư, nhật ký chỉ máy chủ truy cập, hàm danh sách người nhận). Ngoài ra web đã được thử với hai và ba người dùng khác nhau trên một máy chủ giả dùng chính PostgREST và các quy tắc này (đăng ký, mời bằng mã số, chấp nhận, đồng bộ, gộp khi sửa cùng lúc, file đính kèm, gỡ thành viên, chuyển dữ liệu cũ lên). Đây là kiểm thử cục bộ, **chưa chạy trên Supabase thật** (đặc biệt phần Realtime), nên nếu có lỗi hãy gửi nguyên văn thông báo lỗi và mô tả bước làm.

@@ -249,6 +249,20 @@ const SupabaseStore=(()=>{
   }
   return r.data;
  }
+ /* ----- nhắc việc qua email: cài đặt của từng người và email thử (hàm Edge send-reminders) ----- */
+ const emailPrefs={
+  async get(){const r=await sb.from('email_reminders').select('enabled,leads').eq('user_id',me.id).maybeSingle();if(r.error)throw r.error;return r.data||{enabled:false,leads:[30]}},
+  async set(p){must(await sb.from('email_reminders').upsert({user_id:me.id,enabled:!!p.enabled,leads:p.leads,updated_at:new Date().toISOString()},{onConflict:'user_id'}))}
+ };
+ async function emailTest(){
+  const r=await sb.functions.invoke('send-reminders',{body:{test:true}});
+  if(r.error){
+   let msg='Không gửi được email thử. Kiểm tra mạng rồi thử lại.';
+   try{const res=r.error.context;if(res){const j=await res.json();msg=j.error||j.message||msg;if(res.status===404&&!j.error)msg='Chưa triển khai hàm send-reminders trên Supabase (xem supabase/README.md)'}}catch(e){}
+   throw new Error(msg);
+  }
+  return r.data;
+ }
  async function removeMember(boardId,userId){must(await sb.from('board_members').delete().eq('board_id',boardId).eq('user_id',userId));await refresh()}
 
  return{
@@ -270,7 +284,7 @@ const SupabaseStore=(()=>{
   async logout(){unsubscribe();known.clear();lastRootJson='';me=null;await sb.auth.signOut()},
   load,save,files,
   async fileIdsInUse(){return null},
-  invites,busy,meetToken,removeMember,subscribe,unsubscribe,refresh,
+  invites,busy,meetToken,emailPrefs,emailTest,removeMember,subscribe,unsubscribe,refresh,
   idle(){return saving?saving.catch(()=>{}):Promise.resolve()},
   set onRemote(f){SupabaseStore_onRemote=f},
   _merge3:merge3

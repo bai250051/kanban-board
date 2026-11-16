@@ -20,6 +20,8 @@ function renderHeader(b){
  if(!tags.includes(filters.tag))filters.tag='all';filters.sprint='all';tf.value=filters.tag;
  document.querySelectorAll('.team-only').forEach(el=>el.hidden=!team);
  document.querySelectorAll('.personal-only').forEach(el=>el.hidden=team);
+ const ownsBoard=!team||!b.owner||b.owner===user.email;
+ $('deleteBoardBtn').hidden=!ownsBoard;$('leaveBoardBtn').hidden=!(team&&!ownsBoard);
  if(team){
   document.querySelectorAll('#viewSeg button').forEach(x=>x.classList.toggle('on',x.dataset.view===(b.view||'columns')));
   const sf=$('sprintFilter');sf.hidden=!(b.sprints.length&&b.view!=='sprint');sf.innerHTML='<option value="all">Mọi sprint</option><option value="backlog">Backlog (chưa có sprint)</option>'+b.sprints.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');

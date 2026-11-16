@@ -1,5 +1,5 @@
 -- Giả lập các phần có sẵn của Supabase để chạy thử trên PostgreSQL thường
-create role anon nologin; create role authenticated nologin;
+create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 create schema auth;
 create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}'::jsonb);
 create function auth.uid() returns uuid language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''), (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'))::uuid $$;
@@ -13,3 +13,4 @@ create function storage.foldername(name text) returns text[] language sql immuta
   select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
 grant usage on schema storage to authenticated; grant select, insert, delete on storage.objects to authenticated;
 create publication supabase_realtime;
+grant usage on schema public to service_role;

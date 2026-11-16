@@ -16,6 +16,26 @@ $('deleteBoardBtn').onclick=()=>{
  pushUndo();const id=db.current;db.boards=db.boards.filter(b=>b.id!==id);db.current=db.boards[0].id;boardDeleteArmed=false;btn.classList.remove('armed');btn.textContent='🗑 Xóa bảng';render();showToast('Đã xóa bảng',true);
 };
 
+/* ---------- Thành viên tự rời nhóm ---------- */
+$('leaveBoardBtn').onclick=async()=>{
+ const b=board(),btn=$('leaveBoardBtn');
+ if(!b||b.type!=='team'||!b.owner||b.owner===user.email)return;
+ if(db.boards.length<2){showToast('Hãy tạo thêm một bảng cá nhân trước khi rời nhóm');return}
+ if(!confirm('Rời khỏi nhóm “'+b.name+'”?\nCác việc đang giao cho bạn sẽ chuyển thành “chưa giao”. Muốn quay lại, trưởng nhóm phải mời bạn lần nữa.'))return;
+ btn.disabled=true;
+ const idx=db.boards.findIndex(x=>x.id===b.id),server=typeof serverMode==='function'&&serverMode();
+ try{
+  b.tasks.forEach(t=>{if(t.assignee===user.email)t.assignee=''});
+  if(server){flushSave();await Store.idle()}
+  db.boards.splice(idx,1);db.current=(db.boards.find(x=>x.type!=='team')||db.boards[0]).id;
+  if(server){
+   try{await Store.removeMember(b.id,user.email)}
+   catch(e){db.boards.splice(idx,0,b);db.current=b.id;render();showToast('Không rời được nhóm, hãy thử lại');return}
+  }
+  render();showToast('Bạn đã rời nhóm “'+b.name+'”');
+ }finally{btn.disabled=false}
+};
+
 /* ---------- Mời thành viên ---------- */
 const toB64=s=>{const by=new TextEncoder().encode(s);let bin='';by.forEach(x=>bin+=String.fromCharCode(x));return btoa(bin)};
 const fromB64=s=>{const bin=atob(s);return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0)))};

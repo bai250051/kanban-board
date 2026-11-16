@@ -45,7 +45,7 @@ function applyTheme(t,anim){
  document.querySelectorAll('[data-theme-choice]').forEach(el=>{const on=el.dataset.themeChoice===t;el.classList.toggle('active',on);el.setAttribute('aria-pressed',on?'true':'false')});
 }
 document.querySelectorAll('[data-theme-choice]').forEach(el=>el.onclick=()=>{applyTheme(el.dataset.themeChoice,true);showToast(el.dataset.themeChoice==='dark'?'Đã chuyển sang giao diện tối':'Đã chuyển sang giao diện sáng')});
-const openSettings=()=>{$('sidebar').classList.remove('open');if(typeof refreshAutoLinkUI==='function')refreshAutoLinkUI();if(typeof refreshShareBusyUI==='function')refreshShareBusyUI();openModal('settingsModal');updateStorageInfo()};
+const openSettings=()=>{$('sidebar').classList.remove('open');if(typeof refreshAutoLinkUI==='function')refreshAutoLinkUI();if(typeof refreshShareBusyUI==='function')refreshShareBusyUI();if(typeof refreshEmailRemUI==='function')refreshEmailRemUI();openModal('settingsModal');updateStorageInfo()};
 $('settingsBtn').onclick=openSettings;$('sideSettings').onclick=openSettings;
 applyTheme(getTheme(),false);
 ['evStart','evEnd','evOneStart','evOneEnd'].forEach(id=>tpInit($(id),$(id+'Tp')));dueInit();
